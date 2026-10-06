@@ -12,7 +12,15 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "incremental": true
+    "incremental": true,
+    "baseUrl": ".",
+    "paths": {
+      "@stoneway/shared": ["./packages/shared/src/index.ts"],
+      "@stoneway/database": ["./packages/database/src/index.ts"],
+      "next/server": ["./apps/web/node_modules/next/server"],
+      "next": ["./apps/web/node_modules/next"],
+      "@/*": ["./apps/web/src/*"]
+    }
   },
   "exclude": ["node_modules", "dist"]
 }

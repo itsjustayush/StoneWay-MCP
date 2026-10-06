@@ -5,6 +5,7 @@
   "description": "Unified persistent memory ecosystem and MCP server for builders and AI agents",
   "license": "MIT",
   "author": "itsjustayush",
+  "packageManager": "pnpm@10.28.0",
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
