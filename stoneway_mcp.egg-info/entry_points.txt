@@ -1,0 +1,2 @@
+[console_scripts]
+stoneway-mcp = stoneway_mcp.server:main
