@@ -164,6 +164,13 @@ class ConnectorSyncResult(BaseModel):
     error: Optional[str] = None
 
 
+# Aliases for backward compatibility and explicit naming
+StoneWayIdentity = Identity
+StoneWayProject = ActiveProject
+StoneWayTechnicalProfile = TechnicalProfile
+StoneWayContact = Contact
+
+
 STARTER_STONEWAY_MD = """# StoneWay Profile Scratchpad
 
 ## Identity & Quick Intro

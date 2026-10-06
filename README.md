@@ -47,14 +47,63 @@ Each builder account is mapped to three files stored on a serverless Neon Postgr
 
 ---
 
-## 🚀 Quick Setup (for Claude Desktop, Claude Code, Cursor)
+## 🚀 Quick Setup (for Claude Desktop, Claude Code, Cursor, Windsurf, Cline)
 
 ### 1. Generate Your Key
 Log in to your StoneWay dashboard via GitHub, complete the quick onboarding, and copy your single builder token (`sw_...`).
 
 ### 2. Configure MCP Client
 
-Add the following to your MCP client configuration (e.g. `claude_desktop_config.json`):
+StoneWay provides a high-performance **Python MCP Server** (with zero-cloud local fallback and cryptographic safety envelopes):
+
+#### Option A: Python / `uvx` (Recommended)
+
+Add to your MCP configuration (e.g. `claude_desktop_config.json` or Cursor Settings):
+
+```json
+{
+  "mcpServers": {
+    "stoneway": {
+      "command": "uvx",
+      "args": ["stoneway-mcp"],
+      "env": {
+        "STONEWAY_TOKEN": "sw_your_token_here",
+        "STONEWAY_API_URL": "https://your-stoneway-domain.com/api/v1"
+      }
+    }
+  }
+}
+```
+
+Or run via standard Python:
+```json
+{
+  "mcpServers": {
+    "stoneway": {
+      "command": "python",
+      "args": ["-m", "stoneway_mcp"],
+      "env": {
+        "STONEWAY_TOKEN": "sw_your_token_here",
+        "STONEWAY_API_URL": "https://your-stoneway-domain.com/api/v1"
+      }
+    }
+  }
+}
+```
+
+*Local-Only Mode (Zero Cloud / Offline):*
+```json
+{
+  "mcpServers": {
+    "stoneway-local": {
+      "command": "uvx",
+      "args": ["stoneway-mcp", "--mode", "local", "--local-dir", "."]
+    }
+  }
+}
+```
+
+#### Option B: Node.js / `npx`
 
 ```json
 {

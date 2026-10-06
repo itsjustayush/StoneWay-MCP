@@ -32,7 +32,15 @@ Thumbs.db
 !.vscode/extensions.json
 .idea/
 *.suo
-*.ntvs*
-*.njsproj
-*.sln
 *.sw?
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/

@@ -71,7 +71,7 @@ async def test_append_note_tool():
 
     # Read markdown resource to confirm note is saved
     md_content = await server.read_resource("stoneway://markdown")
-    assert "Added unit tests for Python MCP server." in md_content[0].text
+    assert "Added unit tests for Python MCP server." in md_content[0].content
 
 
 @pytest.mark.asyncio

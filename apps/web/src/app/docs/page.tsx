@@ -30,7 +30,7 @@ export default function DocsPage() {
         <h2 className="text-sm font-bold text-white uppercase tracking-wider">2. MCP Client Setup</h2>
         
         <div className="space-y-2">
-          <h3 className="font-bold text-neutral-200">Claude Desktop</h3>
+          <h3 className="font-bold text-neutral-200">Claude Desktop (Python / uvx - Recommended)</h3>
           <p className="text-neutral-400">
             Open <code className="text-neutral-300">%APPDATA%\Claude\claude_desktop_config.json</code> (Windows) or <code className="text-neutral-300">~/Library/Application Support/Claude/claude_desktop_config.json</code> (macOS) and add:
           </p>
@@ -38,8 +38,8 @@ export default function DocsPage() {
 {`{
   "mcpServers": {
     "stoneway": {
-      "command": "npx",
-      "args": ["-y", "stoneway-mcp"],
+      "command": "uvx",
+      "args": ["stoneway-mcp"],
       "env": {
         "STONEWAY_TOKEN": "sw_your_token_here",
         "STONEWAY_API_URL": "https://stoneway.vercel.app/api/v1"
@@ -57,9 +57,26 @@ export default function DocsPage() {
           </p>
           <ul className="list-disc pl-5 space-y-1 text-neutral-400">
             <li><strong>Type:</strong> <code className="text-neutral-300">command</code></li>
-            <li><strong>Command:</strong> <code className="text-neutral-300">npx -y stoneway-mcp</code></li>
+            <li><strong>Command:</strong> <code className="text-neutral-300">uvx stoneway-mcp</code> (or <code className="text-neutral-300">python -m stoneway_mcp</code>)</li>
             <li><strong>Environment:</strong> <code className="text-neutral-300">STONEWAY_TOKEN=sw_...</code></li>
           </ul>
+        </div>
+
+        <div className="space-y-2">
+          <h3 className="font-bold text-neutral-200">Offline / Local Workspace Mode (No Cloud Token Needed)</h3>
+          <p className="text-neutral-400">
+            You can run StoneWay completely offline directly inside your git repositories:
+          </p>
+          <pre className="p-3 bg-neutral-950 border border-neutral-900 rounded text-[11px] text-neutral-300 overflow-x-auto">
+{`{
+  "mcpServers": {
+    "stoneway-local": {
+      "command": "uvx",
+      "args": ["stoneway-mcp", "--mode", "local", "--local-dir", "."]
+    }
+  }
+}`}
+          </pre>
         </div>
       </section>
 
