@@ -1,0 +1,91 @@
+<pre>
+███████╗████████╗ ██████╗ ███╗   ██╗███████╗██╗    ██╗ █████╗ ██╗   ██╗    ███╗   ███╗██████╗ 
+██╔════╝╚══██╔══╝██╔═══██╗████╗  ██║██╔════╝██║    ██║██╔══██╗╚██╗ ██╔╝    ████╗ ████║██╔══██╗
+███████╗   ██║   ██║   ██║██╔██╗ ██║█████╗  ██║ █╗ ██║███████║ ╚████╔╝     ██╔████╔██║██║  ██║
+╚════██║   ██║   ██║   ██║██║╚██╗██║██╔══╝  ██║███╗██║██╔══██║  ╚██╔╝      ██║╚██╔╝██║██║  ██║
+███████║   ██║   ╚██████╔╝██║ ╚████║███████╗╚███╔███╔╝██║  ██║   ██║       ██║ ╚═╝ ██║██████╔╝
+╚══════╝   ╚═╝    ╚═════╝ ╚═╝  ╚═══╝╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝   ╚═╝       ╚═╝     ╚═╝╚═════╝
+</pre>
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-black.svg?style=flat-square)](https://opensource.org/licenses/MIT)
+[![Protocol: MCP](https://img.shields.io/badge/Protocol-MCP-black.svg?style=flat-square)](https://modelcontextprotocol.io)
+[![Stack: Turborepo](https://img.shields.io/badge/Stack-Turborepo-black.svg?style=flat-square)](https://turbo.build)
+[![Database: Neon](https://img.shields.io/badge/Database-Neon_Postgres-black.svg?style=flat-square)](https://neon.tech)
+[![Auth: Better_Auth](https://img.shields.io/badge/Auth-Better_Auth-black.svg?style=flat-square)](https://better-auth.com)
+
+> **StoneWay** is an open-source, cloud-backed Model Context Protocol (MCP) server that acts as **"Notion for your AI agents"**: one persistent, live-synchronized memory bank of a builder's identity, active projects, tech stack, snippets, vision, and bio materials that any AI agent can read and update.
+
+---
+
+## ⚡ The Problem
+
+As a developer, hyper-builder, or "vibecoder", you interact with multiple AI tools every day: Claude Desktop, Claude Code, Cursor, Windsurf, custom agents, and web assistants.
+
+Every single time you start a new conversation or session, you face the same friction:
+- *"Who are you and what do you build?"*
+- Rewriting your bio from memory or searching for your GitHub links.
+- Explaining your current tech stack, preferred libraries, and active projects over and over again.
+- Losing context when an agent discovers an insight, finishes a prototype, or logs a system preference.
+
+**StoneWay eliminates this.** It gives your AI agents a unified, cloud-persisted single source of truth.
+
+---
+
+## 🛠️ Architecture: The Tri-File Memory Model
+
+Each builder account is mapped to three files stored on a serverless Neon PostgreSQL database:
+
+1. **`StoneWay.md` (Raw Scratchpad & Builder Memory):**
+   - Free-form, human-and-agent editable markdown file.
+   - Designed to absorb messy scratchpad notes, ideas, commit logs, and prompt preferences.
+2. **`StoneWay.json` (Structured Builder Matrix):**
+   - Schema-validated structured profile (Zod) acting as the primary source of truth for agents.
+   - Categorizes identity, technical profile, public/private contact, active projects, planned ideas, and overflow metadata (`unstructured_metadata[]`).
+3. **`StoneWayConfig` (AES-256-GCM Encrypted Envelope):**
+   - Stores the user's `STONEWAY_TOKEN` and optional third-party sync secrets (GitHub PAT, Notion token).
+   - Encrypted at rest using deployment-level symmetric keys; never exposed via agent MCP tools or plaintext database logs.
+
+---
+
+## 🚀 Quick Setup (for Claude Desktop, Claude Code, Cursor)
+
+### 1. Generate Your Key
+Log in to your StoneWay dashboard via GitHub, complete the quick onboarding, and copy your single builder token (`sw_...`).
+
+### 2. Configure MCP Client
+
+Add the following to your MCP client configuration (e.g. `claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "stoneway": {
+      "command": "npx",
+      "args": ["-y", "stoneway-mcp"],
+      "env": {
+        "STONEWAY_TOKEN": "sw_your_token_here",
+        "STONEWAY_API_URL": "https://your-stoneway-domain.com/api/v1"
+      }
+    }
+  }
+}
+```
+
+---
+
+## 🔒 Security, Safety & Legal Protection
+
+StoneWay is built with a zero-plaintext security posture and comprehensive legal shielding:
+
+- **[MIT License](LICENSE):** Open-source code with full express warranty and liability disclaimers.
+- **[Terms of Service](TERMS.md):** Absolute limitation of liability ($0 cap), user indemnification, assumption of AI agent execution risks, and token custody rules.
+- **[Privacy Policy](PRIVACY.md):** Clear GDPR/CCPA-compliant disclosure explaining data storage in Neon Postgres, encryption at rest, zero data selling, and user data wipe mechanisms.
+- **[AI Safety & Disclaimers](DISCLAIMER.md):** Detailed guidelines on prompt injection safety envelopes, agent attribution limits, and non-affiliation statements.
+- **[Security Policy](SECURITY.md):** Vulnerability disclosure protocols and AES-256-GCM encryption architecture.
+
+---
+
+## 👥 Creator & Community
+
+Built with 🖤 by **[itsjustayush](https://github.com/itsjustayush)** for builders, creators, and vibecoders everywhere.
+Distributed under the [MIT License](LICENSE).
