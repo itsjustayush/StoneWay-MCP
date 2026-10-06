@@ -1,0 +1,24 @@
+{
+  "name": "@stoneway/database",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "build": "tsc",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^0.10.4",
+    "@stoneway/shared": "workspace:*",
+    "dotenv": "^16.4.7",
+    "drizzle-orm": "^0.39.3"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.30.5",
+    "typescript": "^5.8.2"
+  }
+}

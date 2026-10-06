@@ -1,0 +1,28 @@
+{
+  "name": "stoneway",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Unified persistent memory ecosystem and MCP server for builders and AI agents",
+  "license": "MIT",
+  "author": "itsjustayush",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "db:generate": "turbo run db:generate",
+    "db:push": "turbo run db:push",
+    "clean": "turbo run clean && rimraf node_modules"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "devDependencies": {
+    "turbo": "^2.4.4",
+    "typescript": "^5.8.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
