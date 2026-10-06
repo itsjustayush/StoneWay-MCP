@@ -26,7 +26,7 @@ TERMS.md
 DISCLAIMER.md
 SECURITY.md
 README.md
-.env.example
+.env.local (gitignored)
 
 ---
 
@@ -215,7 +215,7 @@ To ensure the author, maintainers, and self-hosters are completely shielded from
    - Reconciliation tests validating the Zero-Data-Loss invariant and `unstructured_metadata` overflow.
    - Privacy filter tests ensuring private contact details never appear in `get_bio` or public profile responses.
 2. **Environment & Configurations:**
-   - `.env.example` documenting all variables: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `STONEWAY_ENCRYPTION_KEY`.
+   - `.env.local` configured with real database connection (`DATABASE_URL`), secrets, and encryption keys.
    - Claude Desktop configuration snippet (`claude_desktop_config.json`).
 3. **GitHub Actions CI:**
    - Automated workflow executing lint, TypeScript typecheck, database migration checks, and Jest/Vitest test suites.
