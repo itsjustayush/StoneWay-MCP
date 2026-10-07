@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { authenticateBearerToken, getOrCreateProfile, reconcileProfile } from "@/lib/server-utils";
 import { AppendNotePayloadSchema } from "@stoneway/shared";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: Request) {
   const authRes = await authenticateBearerToken(req);
   if (!authRes.success) {

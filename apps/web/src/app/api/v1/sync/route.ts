@@ -5,6 +5,8 @@ import { githubConnector } from "@/lib/connectors/github";
 import { DecryptedConfig } from "@stoneway/shared";
 import { eq } from "drizzle-orm";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: Request) {
   const authRes = await authenticateBearerToken(req);
   if (!authRes.success) {

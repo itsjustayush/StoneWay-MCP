@@ -40,6 +40,8 @@ function formatBio(json: StoneWayJson, platform: string, tone: string, maxLength
   return bio;
 }
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: Request) {
   const authRes = await authenticateBearerToken(req);
   if (!authRes.success) {

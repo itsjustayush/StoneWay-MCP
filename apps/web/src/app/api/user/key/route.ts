@@ -6,6 +6,8 @@ import { eq, and, isNull } from "drizzle-orm";
 import { getOrCreateProfile } from "@/lib/server-utils";
 import { DecryptedConfig } from "@stoneway/shared";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {

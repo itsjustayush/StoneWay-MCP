@@ -12,7 +12,7 @@ export const auth = betterAuth({
       verification: schema.verification,
     },
   }),
-  secret: process.env.BETTER_AUTH_SECRET,
+  secret: process.env.BETTER_AUTH_SECRET || "stoneway-build-fallback-secret-minimum-32-chars-ok",
   baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
   socialProviders: {
     github: {
