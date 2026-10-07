@@ -187,21 +187,145 @@ export const DecryptedConfigSchema = z.object({
 export type DecryptedConfig = z.infer<typeof DecryptedConfigSchema>;
 
 // ==========================================
-// 6. Connectors Interface
+// 6. Connectors Interface & Manifests
 // ==========================================
+export interface ConnectorManifest {
+  id: string;
+  name: string;
+  description: string;
+  category: "vcs" | "package" | "docs" | "feed" | "custom";
+  reads: string[];
+  requiredScopes: string[];
+  writes: string[];
+  authType: "none" | "pat" | "oauth" | "api_key";
+}
+
 export interface ConnectorSyncResult {
   connector_id: string;
   success: boolean;
   message: string;
   timestamp: string;
   extracted_data?: Record<string, any>;
+  field_sources?: Record<string, string>;
   error?: string;
 }
 
 export interface Connector {
   id: string;
   name: string;
+  manifest: ConnectorManifest;
   sync(userId: string, config: DecryptedConfig): Promise<ConnectorSyncResult>;
+}
+
+// ==========================================
+// 6.1 JSON Resume Standard Converter
+// ==========================================
+export interface JSONResume {
+  basics: {
+    name: string;
+    label: string;
+    image: string;
+    email?: string;
+    url?: string;
+    summary: string;
+    location?: {
+      city?: string;
+      timezone?: string;
+    };
+    profiles: Array<{
+      network: string;
+      username: string;
+      url: string;
+    }>;
+  };
+  skills: Array<{
+    name: string;
+    keywords: string[];
+  }>;
+  projects: Array<{
+    name: string;
+    description: string;
+    url?: string;
+    keywords: string[];
+  }>;
+  meta: {
+    canonical: string;
+    version: string;
+    lastModified: string;
+  };
+}
+
+export function stonewayToJsonResume(profile: StoneWayJson): JSONResume {
+  const identity = profile.identity || {};
+  const contact = profile.contact || {};
+  const tech = profile.technical_profile || {};
+  const profilesList: Array<{ network: string; username: string; url: string }> = [];
+
+  if (contact.github?.value && contact.github.visibility === "public") {
+    profilesList.push({
+      network: "GitHub",
+      username: contact.github.value.replace(/^https?:\/\/github\.com\//, ""),
+      url: contact.github.value.startsWith("http") ? contact.github.value : `https://github.com/${contact.github.value}`,
+    });
+  }
+  if (contact.twitter?.value && contact.twitter.visibility === "public") {
+    profilesList.push({
+      network: "Twitter/X",
+      username: contact.twitter.value.replace(/^https?:\/\/x\.com\//, "").replace(/^@/, ""),
+      url: contact.twitter.value.startsWith("http") ? contact.twitter.value : `https://x.com/${contact.twitter.value}`,
+    });
+  }
+  if (contact.linkedin?.value && contact.linkedin.visibility === "public") {
+    profilesList.push({
+      network: "LinkedIn",
+      username: contact.linkedin.value,
+      url: contact.linkedin.value.startsWith("http") ? contact.linkedin.value : `https://linkedin.com/in/${contact.linkedin.value}`,
+    });
+  }
+
+  const skills: Array<{ name: string; keywords: string[] }> = [];
+  if (tech.primary_languages?.length) {
+    skills.push({ name: "Programming Languages", keywords: tech.primary_languages });
+  }
+  if (tech.frameworks?.length) {
+    skills.push({ name: "Frameworks & Libraries", keywords: tech.frameworks });
+  }
+  if (tech.databases?.length) {
+    skills.push({ name: "Databases & Storage", keywords: tech.databases });
+  }
+  if (tech.tools?.length) {
+    skills.push({ name: "Tools & Platforms", keywords: tech.tools });
+  }
+
+  const projects = (profile.active_projects || []).map((p) => ({
+    name: p.name,
+    description: p.description || "",
+    url: p.live_url || p.repo_url || undefined,
+    keywords: p.tech_stack || [],
+  }));
+
+  return {
+    basics: {
+      name: identity.name || "Developer",
+      label: identity.headline || "Software Builder",
+      image: identity.avatar || "",
+      email: contact.email?.visibility === "public" ? contact.email.value : undefined,
+      url: contact.website?.visibility === "public" ? contact.website.value : undefined,
+      summary: identity.bio || "",
+      location: {
+        city: identity.location || undefined,
+        timezone: identity.timezone || undefined,
+      },
+      profiles: profilesList,
+    },
+    skills,
+    projects,
+    meta: {
+      canonical: "https://raw.githubusercontent.com/jsonresume/resume-schema/v1.0.0/schema.json",
+      version: `v${profile.meta?.version || 1}`,
+      lastModified: profile.meta?.updated_at || new Date().toISOString(),
+    },
+  };
 }
 
 // ==========================================

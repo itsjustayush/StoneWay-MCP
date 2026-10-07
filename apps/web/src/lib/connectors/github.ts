@@ -2,7 +2,22 @@ import { Connector, ConnectorSyncResult, DecryptedConfig } from "@stoneway/share
 
 export const githubConnector: Connector = {
   id: "github",
-  name: "GitHub Public Profile & Repos",
+  name: "GitHub Public Repositories",
+  manifest: {
+    id: "github",
+    name: "GitHub Public Repositories",
+    description: "Syncs recently updated public repositories, descriptions, tech stacks, and primary languages.",
+    category: "vcs",
+    reads: [
+      "Public repositories",
+      "Repository descriptions and topics",
+      "Language statistics",
+      "Repository homepage & HTML links",
+    ],
+    requiredScopes: ["none (for public profiles) or repo:read (optional for private repos)"],
+    writes: ["active_projects", "technical_profile.primary_languages"],
+    authType: "pat",
+  },
   async sync(username: string, config: DecryptedConfig): Promise<ConnectorSyncResult> {
     const timestamp = new Date().toISOString();
     try {
@@ -54,6 +69,10 @@ export const githubConnector: Connector = {
         extracted_data: {
           active_projects: activeProjects,
           primary_languages: Array.from(languages),
+        },
+        field_sources: {
+          active_projects: `https://api.github.com/users/${username}/repos`,
+          "technical_profile.primary_languages": `https://api.github.com/users/${username}/repos [language tags]`,
         },
       };
     } catch (err: any) {

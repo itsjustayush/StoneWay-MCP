@@ -5,6 +5,8 @@ import { githubConnector } from "@/lib/connectors/github";
 import { DecryptedConfig } from "@stoneway/shared";
 import { eq } from "drizzle-orm";
 
+import { recordAuditEvent } from "@/lib/audit";
+
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
@@ -16,6 +18,14 @@ export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
     const integration = body.integration || "github";
+
+    await recordAuditEvent({
+      userId: authRes.context.userId,
+      event: "sync.trigger",
+      agentLabel: req.headers.get("x-stoneway-agent") || "sync_runner",
+      req,
+      metadata: { integration },
+    });
 
     const profile = await getOrCreateProfile(authRes.context.userId);
 
@@ -48,6 +58,29 @@ export async function POST(req: Request) {
           },
           agentName: "connector_github_sync",
         });
+
+        await recordAuditEvent({
+          userId: authRes.context.userId,
+          event: "sync.complete",
+          agentLabel: "connector_github_sync",
+          req,
+          metadata: {
+            integration: "github",
+            projects_synced: syncResult.extracted_data.active_projects?.length || 0,
+            field_sources: syncResult.field_sources,
+          },
+        });
+      } else {
+        await recordAuditEvent({
+          userId: authRes.context.userId,
+          event: "sync.error",
+          agentLabel: "connector_github_sync",
+          req,
+          metadata: {
+            integration: "github",
+            error: syncResult.error || syncResult.message,
+          },
+        });
       }
     } else {
       return NextResponse.json(
@@ -62,6 +95,13 @@ export async function POST(req: Request) {
       result: syncResult,
     });
   } catch (err: any) {
+    await recordAuditEvent({
+      userId: authRes.context.userId,
+      event: "sync.error",
+      agentLabel: "sync_runner",
+      req,
+      metadata: { error: err.message },
+    });
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

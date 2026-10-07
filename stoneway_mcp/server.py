@@ -37,6 +37,7 @@ server = MCPServer(
     name="stoneway-mcp",
     version="0.1.0",
 )
+mcp = server  # Canonical alias for @mcp.tool, @mcp.resource, @mcp.prompt
 
 # Active storage engine (lazily resolved)
 _storage: Optional[BaseStorageBackend] = None
@@ -59,7 +60,18 @@ def set_active_storage(storage: BaseStorageBackend) -> None:
 # =====================================================================
 @server.tool()
 async def get_profile_context() -> str:
-    """Call this first whenever you need facts, tech stacks, bio info, links, or active projects about the user. Returns structured StoneWay.json and raw StoneWay.md with reconciliation guidance."""
+    """Retrieves structured developer profile (StoneWay.json) and markdown scratchpad (StoneWay.md), including active projects, tech stack, preferences, and reconciliation status.
+
+    Use this tool when:
+    - The user or prompt asks about the developer's tech stack, current projects, preferences, or background.
+    - At the beginning of a coding session to align with the builder's preferences and active libraries.
+    - You need to check if there are unreconciled markdown logs that need to be merged into structured data.
+
+    Do NOT use this tool when:
+    - You only need a short platform-tailored bio (use get_bio instead).
+    - You want to record a quick note or progress entry (use append_note instead).
+    - The user query is completely unrelated to the developer or their projects.
+    """
     try:
         storage = get_active_storage()
         ctx = await storage.get_profile()
@@ -95,7 +107,18 @@ async def update_profile_context(
     md_append: Optional[str] = None,
     agent_name: Optional[str] = None,
 ) -> str:
-    """Safely updates structured profile attributes and/or appends notes to StoneWay.md without data loss. Reconciles structural updates into StoneWay.json with optimistic locking."""
+    """Safely updates structured profile attributes and/or appends notes to StoneWay.md without data loss. Reconciles structural updates into StoneWay.json with optimistic locking.
+
+    Use this tool when:
+    - You want to update active projects, add newly adopted tech stacks, or modify developer preferences.
+    - You are reconciling unstructured scratchpad excerpts into structured StoneWay.json fields.
+    - You have a verified base_version obtained from get_profile_context.
+
+    Do NOT use this tool when:
+    - You only want to append a timestamped progress note without modifying structured metadata (use append_note instead).
+    - You do not know the current base_version (always call get_profile_context first to avoid 409 conflict).
+    - You want to overwrite data without respecting existing fields (StoneWay enforces zero-data-loss).
+    """
     try:
         storage = get_active_storage()
         res = await storage.update_profile(
@@ -120,7 +143,17 @@ async def append_note(
     note: str,
     agent_name: Optional[str] = None,
 ) -> str:
-    """Quickly appends a timestamped scratchpad note, idea, or observation into StoneWay.md tagged with your agent name."""
+    """Quickly appends an append-only timestamped note, thought, or build log into StoneWay.md tagged with your agent name.
+
+    Use this tool when:
+    - Finishing a coding task or session to log what was completed or changed.
+    - Capturing quick architectural thoughts, blockers, or ideas during development.
+    - Leaving handover notes for other AI agents or the developer.
+
+    Do NOT use this tool when:
+    - You need to update structured profile fields like primary_languages or active_projects (use update_profile_context instead).
+    - You want to read or query existing notes (use get_profile_context or stoneway://markdown instead).
+    """
     try:
         storage = get_active_storage()
         res = await storage.append_note(note=note, agent_name=agent_name)
@@ -138,7 +171,16 @@ async def get_bio(
     tone: str = "technical",
     max_length: int = 280,
 ) -> str:
-    """Generates platform-tailored builder bios using STRICTLY fields marked with visibility: 'public'. Filters out private contact and location info."""
+    """Generates platform-tailored builder bios using STRICTLY fields marked with visibility: 'public'. Filters out private contact and location info.
+
+    Use this tool when:
+    - The user asks: "Write my bio", "Draft my X profile", or "Update my GitHub bio".
+    - You need a concise, privacy-safe intro summary of the developer tailored to character limits and tone.
+
+    Do NOT use this tool when:
+    - You need comprehensive tech stack facts or internal project details (use get_profile_context instead).
+    - The user wants to edit or mutate profile data (use update_profile_context instead).
+    """
     try:
         storage = get_active_storage()
         res = await storage.get_bio(
@@ -158,13 +200,91 @@ async def get_bio(
 async def trigger_external_sync(
     integration: str = "all",
 ) -> str:
-    """Triggers on-demand synchronization for connected integrations (GitHub, npm, Hugging Face, RSS, Notion)."""
+    """Triggers on-demand synchronization for connected integrations (GitHub, npm, Hugging Face, RSS, Notion).
+
+    Use this tool when:
+    - The developer asks to refresh or sync their GitHub repos or external profiles into StoneWay.
+    - Recent external project activity needs to be imported into active projects.
+
+    Do NOT use this tool when:
+    - Making local agent note updates (use append_note instead).
+    - Reading existing synced data (use get_profile_context instead).
+    """
     try:
         storage = get_active_storage()
         res = await storage.trigger_sync(integration=integration)
         return wrap_in_safety_envelope(json.dumps(res, indent=2))
     except Exception as e:
         return f"[StoneWay Sync Error]: {str(e)}"
+
+
+# =====================================================================
+# TOOL 6: export_json_resume
+# =====================================================================
+@server.tool()
+async def export_json_resume() -> str:
+    """Generates and exports the developer's StoneWay profile formatted according to the standard JSON Resume schema.
+
+    Use this tool when:
+    - The user asks for their resume, CV, or JSON Resume export.
+    - An external tool or agent requires standard JSON Resume format.
+
+    Do NOT use this tool when:
+    - You need raw StoneWay.json or scratchpad logs (use get_profile_context instead).
+    """
+    try:
+        storage = get_active_storage()
+        ctx = await storage.get_profile()
+        profile_json = ctx.stoneway_json
+        identity = profile_json.get("identity", {})
+        contact = profile_json.get("contact", {})
+        tech = profile_json.get("technical_profile", {})
+
+        profiles_list = []
+        for net, key in [("GitHub", "github"), ("Twitter/X", "twitter"), ("LinkedIn", "linkedin")]:
+            field = contact.get(key)
+            if isinstance(field, dict) and field.get("visibility") == "public" and field.get("value"):
+                profiles_list.append({"network": net, "username": field["value"], "url": field["value"]})
+
+        skills = []
+        if tech.get("primary_languages"):
+            skills.append({"name": "Programming Languages", "keywords": tech["primary_languages"]})
+        if tech.get("frameworks"):
+            skills.append({"name": "Frameworks", "keywords": tech["frameworks"]})
+        if tech.get("databases"):
+            skills.append({"name": "Databases", "keywords": tech["databases"]})
+        if tech.get("tools"):
+            skills.append({"name": "Tools", "keywords": tech["tools"]})
+
+        projects = [
+            {
+                "name": p.get("name", "Project"),
+                "description": p.get("description", ""),
+                "url": p.get("live_url") or p.get("repo_url"),
+                "keywords": p.get("tech_stack", []),
+            }
+            for p in profile_json.get("active_projects", [])
+        ]
+
+        resume = {
+            "basics": {
+                "name": identity.get("name") or "Developer",
+                "label": identity.get("headline") or "Software Builder",
+                "image": identity.get("avatar", ""),
+                "summary": identity.get("bio", ""),
+                "profiles": profiles_list,
+            },
+            "skills": skills,
+            "projects": projects,
+            "meta": {
+                "canonical": "https://raw.githubusercontent.com/jsonresume/resume-schema/v1.0.0/schema.json",
+                "version": f"v{ctx.version}",
+            },
+        }
+        return json.dumps(resume, indent=2)
+    except Exception as e:
+        return f"[StoneWay Error]: Unable to export JSON Resume: {str(e)}"
+
 
 
 # =====================================================================

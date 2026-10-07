@@ -42,3 +42,17 @@ export const revisions = pgTable("revisions", {
   agentLabel: text("agent_label").notNull().default("user"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+export const auditEvents = pgTable("audit_events", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  event: text("event").notNull(),
+  agentLabel: text("agent_label").notNull().default("web"),
+  ipHash: text("ip_hash"),
+  requestId: text("request_id"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+

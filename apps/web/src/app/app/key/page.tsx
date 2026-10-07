@@ -99,6 +99,12 @@ export default function KeyHubPage() {
         <span className="font-bold text-white border-b-2 border-white pb-3 -mb-3.5">
           api key hub (/app/key)
         </span>
+        <Link href="/app/connectors" className="text-neutral-500 hover:text-white transition">
+          connectors (/app/connectors)
+        </Link>
+        <Link href="/app/activity" className="text-neutral-500 hover:text-white transition">
+          activity (/app/activity)
+        </Link>
       </div>
 
       <div className="space-y-2">

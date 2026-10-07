@@ -7,6 +7,8 @@ import {
   UnstructuredMetadata,
 } from "@stoneway/shared";
 
+import { recordAuditEvent } from "@/lib/audit";
+
 export interface AuthContext {
   userId: string;
   keyId: string;
@@ -46,6 +48,23 @@ export async function authenticateBearerToken(
     .limit(1);
 
   if (!activeKey) {
+    // Check if key existed but was revoked
+    const [revokedKey] = await db
+      .select()
+      .from(schema.apiKeys)
+      .where(eq(schema.apiKeys.keyHash, keyHash))
+      .limit(1);
+
+    if (revokedKey) {
+      await recordAuditEvent({
+        userId: revokedKey.userId,
+        event: "auth.failure",
+        agentLabel: "unauthorized_client",
+        req,
+        metadata: { reason: "revoked_key_used" },
+      });
+    }
+
     return {
       success: false,
       status: 401,
@@ -232,6 +251,19 @@ export async function reconcileProfile(
     fileType: options.mdAppend || options.mdReplace ? "md" : "json",
     content: options.mdAppend || options.mdReplace ? newMd : JSON.stringify(validatedJson),
     agentLabel: options.agentName || "agent",
+  });
+
+  // 6. Record Audit Event
+  await recordAuditEvent({
+    userId: profile.userId,
+    event: "profile.write",
+    agentLabel: options.agentName || "agent",
+    metadata: {
+      version: nextVersion,
+      unstructured_saved: unstructuredSavedCount,
+      has_json_patch: !!options.jsonPatch,
+      has_md_append: !!options.mdAppend,
+    },
   });
 
   return {

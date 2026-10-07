@@ -8,7 +8,8 @@ import { wrapInSafetyEnvelope } from "@stoneway/shared";
 dotenv.config();
 
 const STONEWAY_TOKEN = process.env.STONEWAY_TOKEN;
-const STONEWAY_API_URL = process.env.STONEWAY_API_URL || "http://localhost:3000/api/v1";
+const rawApiUrl = process.env.STONEWAY_API_URL || "https://stonewaymd.vercel.app/api/v1";
+const STONEWAY_API_URL = rawApiUrl.endsWith("/api/v1") ? rawApiUrl : `${rawApiUrl.replace(/\/+$/, "")}/api/v1`;
 
 if (!STONEWAY_TOKEN) {
   console.error(`
@@ -87,7 +88,17 @@ const server = new McpServer({
 // ==========================================
 server.tool(
   "get_profile_context",
-  "Call this first whenever you need facts, tech stacks, bio info, links, or active projects about the user. Returns structured StoneWay.json and raw StoneWay.md with reconciliation guidance.",
+  `Retrieves structured developer profile (StoneWay.json) and markdown scratchpad (StoneWay.md), including active projects, tech stack, preferences, and reconciliation status.
+
+Use this tool when:
+- The user or prompt asks about the developer's tech stack, current projects, preferences, or background.
+- At the beginning of a coding session to align with the builder's preferences and active libraries.
+- You need to check if there are unreconciled markdown logs that need to be merged into structured data.
+
+Do NOT use this tool when:
+- You only need a short platform-tailored bio (use get_bio instead).
+- You want to record a quick note or progress entry (use append_note instead).
+- The user query is completely unrelated to the developer or their projects.`,
   {},
   async () => {
     const res = await apiRequest("/profile", { method: "GET" });
@@ -137,7 +148,17 @@ server.tool(
 // ==========================================
 server.tool(
   "update_profile_context",
-  "Safely updates structured profile attributes and/or appends notes to StoneWay.md without data loss. Reconciles structural updates into StoneWay.json.",
+  `Safely updates structured profile attributes and/or appends notes to StoneWay.md without data loss. Reconciles structural updates into StoneWay.json with optimistic locking.
+
+Use this tool when:
+- You want to update active projects, add newly adopted tech stacks, or modify developer preferences.
+- You are reconciling unstructured scratchpad excerpts into structured StoneWay.json fields.
+- You have a verified base_version obtained from get_profile_context.
+
+Do NOT use this tool when:
+- You only want to append a timestamped progress note without modifying structured metadata (use append_note instead).
+- You do not know the current base_version (always call get_profile_context first to avoid 409 conflict).
+- You want to overwrite data without respecting existing fields (StoneWay enforces zero-data-loss).`,
   {
     base_version: z.number().describe("The version number of the profile obtained from get_profile_context (required for optimistic locking)."),
     json_patch: z.record(z.any()).optional().describe("Partial structured JSON object to merge into StoneWay.json."),
@@ -193,7 +214,16 @@ server.tool(
 // ==========================================
 server.tool(
   "append_note",
-  "Quickly appends a timestamped scratchpad note, idea, or observation into StoneWay.md tagged with your agent name.",
+  `Quickly appends a timestamped scratchpad note, idea, or observation into StoneWay.md tagged with your agent name.
+
+Use this tool when:
+- Finishing a coding task or session to log what was completed or changed.
+- Capturing quick architectural thoughts, blockers, or ideas during development.
+- Leaving handover notes for other AI agents or the developer.
+
+Do NOT use this tool when:
+- You need to update structured profile fields like primary_languages or active_projects (use update_profile_context instead).
+- You want to read or query existing notes (use get_profile_context or stoneway://markdown instead).`,
   {
     note: z.string().min(1).describe("The observation, commit log, or note to record."),
     agent_name: z.string().optional().describe("Optional name of the agent submitting the note."),
@@ -236,7 +266,15 @@ server.tool(
 // ==========================================
 server.tool(
   "get_bio",
-  "Generates platform-tailored builder bios using STRICTLY fields marked with visibility: 'public'. Filters out private contact and location info.",
+  `Generates platform-tailored builder bios using STRICTLY fields marked with visibility: 'public'. Filters out private contact and location info.
+
+Use this tool when:
+- The user asks: "Write my bio", "Draft my X profile", or "Update my GitHub bio".
+- You need a concise, privacy-safe intro summary of the developer tailored to character limits and tone.
+
+Do NOT use this tool when:
+- You need comprehensive tech stack facts or internal project details (use get_profile_context instead).
+- The user wants to edit or mutate profile data (use update_profile_context instead).`,
   {
     platform: z.enum(["github", "x", "linkedin", "devpost", "generic"]).default("generic").describe("Target platform format."),
     tone: z.enum(["casual", "technical", "founder", "minimal"]).default("technical").describe("Desired tone."),
@@ -291,7 +329,15 @@ server.tool(
 // ==========================================
 server.tool(
   "trigger_external_sync",
-  "Triggers on-demand synchronization for connected integrations (GitHub, npm, Hugging Face, RSS, Notion).",
+  `Triggers on-demand synchronization for connected integrations (GitHub, npm, Hugging Face, RSS, Notion).
+
+Use this tool when:
+- The developer asks to refresh or sync their GitHub repos or external profiles into StoneWay.
+- Recent external project activity needs to be imported into active projects.
+
+Do NOT use this tool when:
+- Making local agent note updates (use append_note instead).
+- Reading existing synced data (use get_profile_context instead).`,
   {
     integration: z.enum(["github", "npm", "huggingface", "rss", "notion", "all"]).describe("Which connector to sync."),
   },
@@ -328,6 +374,46 @@ server.tool(
               2
             )
           ),
+        },
+      ],
+    };
+  }
+);
+
+// ==========================================
+// TOOL 6: export_json_resume
+// ==========================================
+server.tool(
+  "export_json_resume",
+  `Generates and exports the developer's StoneWay profile formatted according to the standard JSON Resume schema.
+
+Use this tool when:
+- The user asks for their resume, CV, or JSON Resume export.
+- An external tool or agent requires standard JSON Resume format.
+
+Do NOT use this tool when:
+- You need raw StoneWay.json or scratchpad logs (use get_profile_context instead).`,
+  {},
+  async () => {
+    const res = await apiRequest("/resume", { method: "GET" });
+
+    if (!res.ok) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `[StoneWay Error]: Unable to export JSON Resume: ${res.error}`,
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(res.data, null, 2),
         },
       ],
     };

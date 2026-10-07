@@ -41,8 +41,10 @@ class Settings:
 
     @property
     def api_url(self) -> str:
-        url = os.getenv("STONEWAY_API_URL", "http://localhost:3000/api/v1")
-        return url.rstrip("/")
+        url = os.getenv("STONEWAY_API_URL", "https://stonewaymd.vercel.app/api/v1").rstrip("/")
+        if not url.endswith("/api/v1"):
+            url = f"{url}/api/v1"
+        return url
 
     @property
     def agent_name(self) -> str:

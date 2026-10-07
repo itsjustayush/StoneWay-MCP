@@ -62,6 +62,24 @@ export default function ProfileEditorPage() {
     URL.revokeObjectURL(url);
   };
 
+  const handleDownloadResume = async () => {
+    try {
+      const res = await fetch("/api/user/resume");
+      if (res.ok) {
+        const data = await res.json();
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "resume.json";
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch {
+      alert("Failed to export JSON Resume.");
+    }
+  };
+
   const handleWipe = async () => {
     if (
       !confirm(
@@ -103,6 +121,12 @@ export default function ProfileEditorPage() {
           <Link href="/app/key" className="text-neutral-500 hover:text-white transition">
             api key hub (/app/key)
           </Link>
+          <Link href="/app/connectors" className="text-neutral-500 hover:text-white transition">
+            connectors (/app/connectors)
+          </Link>
+          <Link href="/app/activity" className="text-neutral-500 hover:text-white transition">
+            activity (/app/activity)
+          </Link>
         </div>
         <div className="text-neutral-500 text-[11px]">
           Profile Version: <span className="text-white font-mono">v{version}</span>
@@ -137,7 +161,7 @@ export default function ProfileEditorPage() {
           </button>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
           {activeTab === "md" && (
             <button
               onClick={handleSaveMd}
@@ -152,9 +176,19 @@ export default function ProfileEditorPage() {
           <button
             onClick={() => handleDownload(activeTab)}
             className="flex items-center space-x-1 text-xs border border-neutral-800 px-3 py-1.5 rounded hover:bg-neutral-900 transition text-neutral-300"
+            title="Download current file"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Download</span>
+          </button>
+
+          <button
+            onClick={handleDownloadResume}
+            className="flex items-center space-x-1 text-xs border border-neutral-800 px-3 py-1.5 rounded hover:bg-neutral-900 transition text-neutral-300 font-mono"
+            title="Export standardized JSON Resume"
+          >
+            <Download className="w-3.5 h-3.5 text-emerald-400" />
+            <span>JSON Resume</span>
           </button>
 
           <button

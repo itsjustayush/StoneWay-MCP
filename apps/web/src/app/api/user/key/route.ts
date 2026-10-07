@@ -6,6 +6,8 @@ import { eq, and, isNull } from "drizzle-orm";
 import { getOrCreateProfile } from "@/lib/server-utils";
 import { DecryptedConfig } from "@stoneway/shared";
 
+import { recordAuditEvent } from "@/lib/audit";
+
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
@@ -29,6 +31,13 @@ export async function GET(req: Request) {
     try {
       const decrypted = decryptConfig<DecryptedConfig>(profile.stonewayConfig);
       rawToken = decrypted.stoneway_api_key;
+      await recordAuditEvent({
+        userId: session.user.id,
+        event: "key.reveal",
+        agentLabel: "web_dashboard",
+        req,
+        metadata: { key_id: activeKey?.id },
+      });
     } catch {
       rawToken = null;
     }
@@ -43,7 +52,7 @@ export async function GET(req: Request) {
   });
 }
 
-export async function POST() {
+export async function POST(req: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -61,12 +70,12 @@ export async function POST() {
   const newRawKey = generateApiKey();
   const newHash = hashApiKey(newRawKey);
 
-  await db.insert(schema.apiKeys).values({
+  const [insertedKey] = await db.insert(schema.apiKeys).values({
     userId: session.user.id,
     keyHash: newHash,
     keyPrefix: "sw_",
     name: "Unified Agent Key",
-  });
+  }).returning();
 
   // 3. Atomically update encrypted StoneWayConfig
   let currentDecrypted: DecryptedConfig = { stoneway_api_key: newRawKey, integrations: {} };
@@ -83,6 +92,14 @@ export async function POST() {
     .set({ stonewayConfig: newEnvelope, updatedAt: new Date() })
     .where(eq(schema.profiles.id, profile.id));
 
+  await recordAuditEvent({
+    userId: session.user.id,
+    event: "key.regenerate",
+    agentLabel: "web_dashboard",
+    req,
+    metadata: { key_id: insertedKey?.id, key_prefix: "sw_" },
+  });
+
   return NextResponse.json({
     success: true,
     token: newRawKey,
@@ -90,7 +107,7 @@ export async function POST() {
   });
 }
 
-export async function DELETE() {
+export async function DELETE(req: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -100,6 +117,13 @@ export async function DELETE() {
     .update(schema.apiKeys)
     .set({ revokedAt: new Date() })
     .where(and(eq(schema.apiKeys.userId, session.user.id), isNull(schema.apiKeys.revokedAt)));
+
+  await recordAuditEvent({
+    userId: session.user.id,
+    event: "key.revoke",
+    agentLabel: "web_dashboard",
+    req,
+  });
 
   return NextResponse.json({ success: true, message: "Token revoked successfully." });
 }
