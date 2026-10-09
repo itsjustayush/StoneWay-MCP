@@ -12,6 +12,14 @@ const nextConfig = {
     webpackBuildWorker: false,
     cpus: 1,
   },
+  webpack: (config) => {
+    config.resolve = config.resolve || {};
+    config.resolve.extensionAlias = {
+      ".js": [".ts", ".tsx", ".js", ".jsx"],
+      ".mjs": [".mts", ".mjs"],
+    };
+    return config;
+  },
   async rewrites() {
     return [
       {
