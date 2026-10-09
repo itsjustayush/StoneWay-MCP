@@ -33,6 +33,8 @@ interface ContextFile {
   tags: string[];
   status: string;
   version: number;
+  authoritative_provider?: string;
+  storage_state?: string;
   has_extracted_text: boolean;
   created_at: string;
   updated_at: string;
@@ -548,6 +550,14 @@ export default function ProfileEditorPage() {
                             {file.context_group}
                           </span>
                           <span className="text-[10px] font-mono text-neutral-400">{formatBytes(file.size)}</span>
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-neutral-900 text-neutral-400 border border-neutral-800">
+                            v{file.version}
+                          </span>
+                          {file.authoritative_provider && (
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                              {file.authoritative_provider.replace("_", " ")}
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-[11px] font-mono text-neutral-400">ID: {file.id}</span>
@@ -582,6 +592,14 @@ export default function ProfileEditorPage() {
                       <span className="text-[11px] text-neutral-400">
                         {new Date(file.created_at).toLocaleDateString()}
                       </span>
+                      <a
+                        href={`/api/user/files/${file.id}/download`}
+                        download={file.filename}
+                        className="p-1.5 text-neutral-400 hover:text-white rounded hover:bg-neutral-900 transition"
+                        title="Download or preview file"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </a>
                       <button
                         onClick={() => handleDeleteFile(file.id, file.filename)}
                         className="p-1.5 text-neutral-400 hover:text-red-400 rounded hover:bg-neutral-900 transition"

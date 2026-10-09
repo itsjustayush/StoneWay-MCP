@@ -49,6 +49,8 @@ export async function GET(req: NextRequest, { params }: Props) {
     mime_type: file.mimeType,
     context_group: file.contextGroup,
     size: file.size,
+    version: file.version,
+    authoritative_provider: file.authoritativeProvider,
     safe_content: wrapped,
   });
 }

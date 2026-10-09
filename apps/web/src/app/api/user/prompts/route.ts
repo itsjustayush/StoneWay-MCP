@@ -11,6 +11,7 @@ import {
 } from "@stoneway/shared";
 import { getOrCreateProfile } from "@/lib/server-utils";
 import { recordAuditEvent } from "@/lib/audit";
+import { cacheGet, cacheSet, cacheDel, CacheKeys } from "@/lib/redis";
 import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +20,12 @@ export async function GET(req: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const cacheKey = CacheKeys.prompts(session.user.id);
+  const cached = await cacheGet<any>(cacheKey);
+  if (cached) {
+    return NextResponse.json({ success: true, ...cached, cached: true });
   }
 
   const [record] = await db
@@ -38,14 +45,20 @@ export async function GET(req: Request) {
     });
   }
 
-  return NextResponse.json({
-    success: true,
+  const responseData = {
     library: {
       schema_version: record.schemaVersion,
       prompts: record.prompts,
     },
     version: record.version,
     updated_at: record.updatedAt.toISOString(),
+  };
+
+  await cacheSet(cacheKey, responseData, 120);
+
+  return NextResponse.json({
+    success: true,
+    ...responseData,
   });
 }
 
@@ -116,6 +129,8 @@ export async function POST(req: Request) {
       prompt_names: libraryToSave.prompts.map((p) => p.name),
     },
   });
+
+  await cacheDel(CacheKeys.prompts(session.user.id));
 
   return NextResponse.json({
     success: true,

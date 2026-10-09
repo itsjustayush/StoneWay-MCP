@@ -378,7 +378,7 @@ export const STARTER_STONEWAY_MD = `# StoneWay Profile Scratchpad
 <!-- AI agents append timestamped notes and commit logs below this line -->
 `;
 
-export * from "./provenance";
-export * from "./prompts";
-export * from "./files";
+export * from "./provenance.js";
+export * from "./prompts.js";
+export * from "./files.js";
 

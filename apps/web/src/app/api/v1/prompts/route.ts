@@ -5,12 +5,25 @@ import { eq } from "drizzle-orm";
 import { renderPromptTemplate } from "@stoneway/shared";
 import { recordAuditEvent } from "@/lib/audit";
 
+import { cacheGet, cacheSet, CacheKeys } from "@/lib/redis";
+
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   const authRes = await authenticateBearerToken(req);
   if (!authRes.success) {
     return NextResponse.json({ error: authRes.error }, { status: authRes.status });
+  }
+
+  const cacheKey = CacheKeys.prompts(authRes.context.userId);
+  const cached = await cacheGet<any>(cacheKey);
+  if (cached?.prompts) {
+    return NextResponse.json({
+      success: true,
+      prompts: cached.prompts,
+      skills: cached.skills || [],
+      cached: true,
+    });
   }
 
   const [record] = await db
@@ -30,6 +43,8 @@ export async function GET(req: Request) {
   const all = record.prompts || [];
   const prompts = all.filter((p) => p.type === "prompt");
   const skills = all.filter((p) => p.type === "skill");
+
+  await cacheSet(cacheKey, { prompts, skills }, 120);
 
   return NextResponse.json({
     success: true,

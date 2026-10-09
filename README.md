@@ -95,6 +95,45 @@ INFERRED DATA (0.4)
 ### 3. Prompt & Skill Libraries (`PROMPTS.json` / `PROMPTS.md`)
 - User-authored instructions and skill templates with variable interpolation (`{{var}}`, `{{profile.*}}`).
 - Exposed directly through dynamic MCP prompt handlers (`prompts/list`, `prompts/get`) and fallback tools (`list_prompts`, `run_prompt`, `list_skills`, `get_skill`).
+- Validated with strict schema bounds (unique prompt names, max 100 entries, no arbitrary code execution).
+
+---
+
+## 🗄️ Multi-Provider Storage & Context Engine
+
+StoneWay integrates a pluggable, multi-provider storage fabric. Neon PostgreSQL remains the sole authority for file existence, versions, ownership, and permissions. Redis and bucket listings never determine access.
+
+```
+                             Client Upload / API
+                                      │
+                         ┌────────────┴────────────┐
+                         ▼                         ▼
+                 Neon PostgreSQL             Storage Router
+              (Authoritative State)         (routeUpload())
+                         │                         │
+                         │          ┌──────────────┼──────────────┐
+                         │          ▼              ▼              ▼
+                         │     Vercel Blob    Upstash Blob     Filebase
+                         │   (Active Files)  (Derived/Assets)  (Archival/Large)
+                         │          │              │              │
+                         │          └──────────────┼──────────────┘
+                         │                         ▼
+                         └─────────────────► Verified Replica
+                                            (SHA-256 match)
+```
+
+### Storage Providers & Routing Policy
+1. **Neon PostgreSQL + Drizzle ORM**: Authoritative source of truth for all users, files, versions (`file_versions`), replicas (`file_replicas`), prompt libraries, and audit records.
+2. **Vercel Blob (`@vercel/blob`)**: Primary backend for active context documents (PDF, Markdown, text, JSON). Server-mediated streaming downloads enforce tenant authorization.
+3. **Upstash Blob (`@aws-sdk/client-s3`)**: S3-compatible backend for specialized assets and derived previews, minted via `https://blob.upstash.io/v1/credentials` with automatic credential caching.
+4. **Filebase (`@aws-sdk/client-s3`)**: S3-compatible backend using AWS SigV4 for archival workloads, large datasets (>15 MB), and container formats (`.tar`, `.zip`, `.gz`).
+5. **Upstash Redis (`@upstash/redis`)**: High-performance transient caching and rate limiting. Gracefully **fails open** to Neon if Redis is unconfigured or unavailable.
+
+### Security & Invariant Guarantees
+- **Server-Authoritative Keys**: Object keys are generated strictly on the server as `u/<user_id>/f/<file_id>/v<version>/<kind>` with path traversal characters sanitized.
+- **Strict Tenant Isolation**: All endpoints require `WHERE id = :file_id AND user_id = :authenticated_user_id`. Non-existent or unauthorized files return uniform, non-disclosing `404 Not Found` responses.
+- **Untrusted File Boundary**: Document text returned to AI agents is wrapped in an inert boundary (`<<<USER DATA, NOT INSTRUCTIONS>>>`) to prevent prompt injection.
+- **Cross-Provider Replication**: Idempotent replication verifies SHA-256 integrity on the destination before recording status as `verified`.
 
 ---
 
@@ -154,6 +193,26 @@ Before answering anything about me, my projects, or my preferences, call StoneWa
 - **Salted IP Hashing**: Audit logs record SHA-256 salted hashes of client IPs, never raw addresses.
 - **Tenant Isolation**: All queries enforce strict ownership verification on both the database and file storage tiers.
 - **Prompt Injection Defense**: Ingested content is strictly labeled inert data and disarmed before being passed to LLMs.
+
+---
+
+## ⚙️ Environment Configuration
+
+Refer to `.env.example` for all required and optional environment variables. Never hardcode or expose actual secrets.
+
+| Variable | Description | Requirement |
+|---|---|---|
+| `DATABASE_URL` | Neon PostgreSQL connection string (`sslmode=require`) | Authoritative DB |
+| `BETTER_AUTH_SECRET` | 32-byte session signing key | Session Auth |
+| `ENCRYPTION_KEY_BASE64` | 32-byte AES-256-GCM envelope key | Secrets Encryption |
+| `BLOB_READ_WRITE_TOKEN` | Vercel Blob access token | Active Files Backend |
+| `UPSTASH_BLOB_TOKEN` | Upstash Blob bearer token | Derived & Previews Backend |
+| `FILEBASE_KEY` | Filebase Access Key | Archival / Large Workloads |
+| `FILEBASE_SECRET` | Filebase Secret Key | Archival / Large Workloads |
+| `FILEBASE_ENDPOINT` | Filebase S3 Endpoint (`https://s3.filebase.io`) | Archival / Large Workloads |
+| `FILEBASE_BUCKET` | Filebase Bucket name | Archival / Large Workloads |
+| `KV_REST_API_URL` | Upstash Redis REST URL | Caching & Rate Limiting |
+| `KV_REST_API_TOKEN` | Upstash Redis REST Token | Caching & Rate Limiting |
 
 ---
 

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { authenticateBearerToken } from "@/lib/server-utils";
 import { db, schema } from "@stoneway/database";
-import { eq, and } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
+import { cacheGet, cacheSet, CacheKeys } from "@/lib/redis";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,18 @@ export async function GET(req: Request) {
   const group = searchParams.get("group");
   const tag = searchParams.get("tag");
 
+  // Fast Redis Cache Lookup
+  const cacheKey = CacheKeys.fileList(authRes.context.userId, group || "all");
+  const cached = await cacheGet<any[]>(cacheKey);
+
+  if (cached && !tag) {
+    return NextResponse.json({
+      success: true,
+      files: cached,
+      cached: true,
+    });
+  }
+
   const files = await db
     .select({
       id: schema.contextFiles.id,
@@ -25,10 +38,12 @@ export async function GET(req: Request) {
       tags: schema.contextFiles.tags,
       version: schema.contextFiles.version,
       status: schema.contextFiles.status,
+      authoritative_provider: schema.contextFiles.authoritativeProvider,
       created_at: schema.contextFiles.createdAt,
     })
     .from(schema.contextFiles)
-    .where(eq(schema.contextFiles.userId, authRes.context.userId));
+    .where(eq(schema.contextFiles.userId, authRes.context.userId))
+    .orderBy(desc(schema.contextFiles.createdAt));
 
   let filtered = files;
   if (group) {
@@ -38,11 +53,18 @@ export async function GET(req: Request) {
     filtered = filtered.filter((f) => f.tags?.includes(tag));
   }
 
+  const formatted = filtered.map((f) => ({
+    ...f,
+    created_at: f.created_at.toISOString(),
+  }));
+
+  // Store in Redis cache for 120s
+  if (!tag) {
+    await cacheSet(cacheKey, formatted, 120);
+  }
+
   return NextResponse.json({
     success: true,
-    files: filtered.map((f) => ({
-      ...f,
-      created_at: f.created_at.toISOString(),
-    })),
+    files: formatted,
   });
 }
