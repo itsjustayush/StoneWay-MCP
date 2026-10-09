@@ -59,7 +59,7 @@ def set_active_storage(storage: BaseStorageBackend) -> None:
 # TOOL 1: get_profile_context
 # =====================================================================
 @server.tool()
-async def get_profile_context() -> str:
+async def get_profile_context(query: Optional[str] = None) -> str:
     """Retrieves structured developer profile (StoneWay.json) and markdown scratchpad (StoneWay.md), including active projects, tech stack, preferences, and reconciliation status.
 
     Use this tool when:
@@ -74,7 +74,7 @@ async def get_profile_context() -> str:
     """
     try:
         storage = get_active_storage()
-        ctx = await storage.get_profile()
+        ctx = await storage.get_profile(query=query)
 
         instruction = (
             "NOTICE: StoneWay.md contains newer unstructured logs. Please parse the unreconciled_md_excerpt, "
@@ -285,6 +285,153 @@ async def export_json_resume() -> str:
     except Exception as e:
         return f"[StoneWay Error]: Unable to export JSON Resume: {str(e)}"
 
+
+# =====================================================================
+# TOOL 7: list_context_files
+# =====================================================================
+@server.tool()
+async def list_context_files(
+    group: Optional[str] = None,
+    tag: Optional[str] = None,
+) -> str:
+    """Lists metadata for user-owned context documents (PDFs, research notes, architecture specs, resumes).
+
+    Use this tool when:
+    - Discovering what supplementary context files or documents the user has uploaded.
+    - Looking for specific project notes, career documents, or research whitepapers.
+
+    Do NOT use this tool when:
+    - You need the user's primary identity or stack (use get_profile_context instead).
+    """
+    try:
+        storage = get_active_storage()
+        res = await storage.list_context_files(group=group, tag=tag)
+        return wrap_in_safety_envelope(json.dumps(res, indent=2))
+    except Exception as e:
+        return f"[StoneWay Error]: Unable to list context files: {str(e)}"
+
+
+# =====================================================================
+# TOOL 8: get_context_file
+# =====================================================================
+@server.tool()
+async def get_context_file(file_id: str) -> str:
+    """Fetches the verified extracted text content of a specific user-owned context file by its secure opaque ID (e.g. 'file_01j...').
+
+    Use this tool when:
+    - The user references a specific document or after discovering its ID via list_context_files or search_context.
+
+    Do NOT use this tool when:
+    - You want to search across all files (use search_context instead).
+    - Guessing filenames (files must be addressed by their secure ID).
+    """
+    try:
+        storage = get_active_storage()
+        res = await storage.get_context_file(file_id=file_id)
+        if isinstance(res, dict) and "safe_content" in res:
+            return res["safe_content"]
+        return wrap_in_safety_envelope(json.dumps(res, indent=2))
+    except Exception as e:
+        return f"[StoneWay Error]: Unable to fetch context file: {str(e)}"
+
+
+# =====================================================================
+# TOOL 9: search_context
+# =====================================================================
+@server.tool()
+async def search_context(query: str, group: Optional[str] = None) -> str:
+    """Searches extracted passages across the user's uploaded context files and StoneWay.md scratchpad.
+
+    Use this tool when:
+    - Looking for specific technical details, project architecture notes, or research papers without downloading entire documents.
+
+    Do NOT use this tool when:
+    - Querying standard profile fields like languages or bio (use get_profile_context instead).
+    """
+    try:
+        storage = get_active_storage()
+        res = await storage.search_context(query=query, group=group)
+        return wrap_in_safety_envelope(json.dumps(res, indent=2))
+    except Exception as e:
+        return f"[StoneWay Error]: Search context failed: {str(e)}"
+
+
+# =====================================================================
+# TOOL 10: list_prompts
+# =====================================================================
+@server.tool()
+async def list_prompts() -> str:
+    """Lists user-authored custom prompts and workflows from PROMPTS.json.
+
+    Use this tool when:
+    - Discovering what specialized workflows or prompts the user has created.
+    """
+    try:
+        storage = get_active_storage()
+        res = await storage.list_prompts()
+        prompts = res.get("prompts", []) if isinstance(res, dict) else []
+        return wrap_in_safety_envelope(json.dumps(prompts, indent=2))
+    except Exception as e:
+        return f"[StoneWay Error]: Unable to list prompts: {str(e)}"
+
+
+# =====================================================================
+# TOOL 11: run_prompt
+# =====================================================================
+@server.tool()
+async def run_prompt(name: str, arguments: Optional[Dict[str, Any]] = None) -> str:
+    """Renders a user-authored prompt by name, substituting arguments and canonical profile context variables.
+
+    Use this tool when:
+    - Executing a user prompt found via list_prompts.
+    """
+    try:
+        storage = get_active_storage()
+        res = await storage.run_prompt(name=name, arguments=arguments)
+        if isinstance(res, dict) and "rendered_content" in res:
+            return res["rendered_content"]
+        return str(res)
+    except Exception as e:
+        return f"[StoneWay Error]: Unable to run prompt '{name}': {str(e)}"
+
+
+# =====================================================================
+# TOOL 12: list_skills
+# =====================================================================
+@server.tool()
+async def list_skills() -> str:
+    """Lists specialized user skill guidelines (e.g. UI design tokens, coding standards) defined in PROMPTS.json.
+
+    Use this tool when:
+    - Discovering domain-specific conventions or design standards the user has defined.
+    """
+    try:
+        storage = get_active_storage()
+        res = await storage.list_prompts()
+        skills = res.get("skills", []) if isinstance(res, dict) else []
+        return wrap_in_safety_envelope(json.dumps(skills, indent=2))
+    except Exception as e:
+        return f"[StoneWay Error]: Unable to list skills: {str(e)}"
+
+
+# =====================================================================
+# TOOL 13: get_skill
+# =====================================================================
+@server.tool()
+async def get_skill(name: str) -> str:
+    """Retrieves the complete instructions and guidelines for a specific skill by name.
+
+    Use this tool when:
+    - The user asks you to perform a task governed by a skill convention (e.g., UI building, testing standards).
+    """
+    try:
+        storage = get_active_storage()
+        res = await storage.run_prompt(name=name, arguments={})
+        if isinstance(res, dict) and "rendered_content" in res:
+            return res["rendered_content"]
+        return str(res)
+    except Exception as e:
+        return f"[StoneWay Error]: Unable to fetch skill '{name}': {str(e)}"
 
 
 # =====================================================================

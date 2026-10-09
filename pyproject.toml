@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "stoneway-mcp"
 version = "0.1.0"
-description = "Cloud-backed Model Context Protocol (MCP) server & memory synchronization engine for AI vibecoders."
+description = "Give every AI agent the same you."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
@@ -30,6 +30,7 @@ dependencies = [
     "pydantic>=2.0.0",
     "cryptography>=42.0.0",
     "click>=8.0.0",
+    "filelock>=3.13.0",
 ]
 
 [project.optional-dependencies]

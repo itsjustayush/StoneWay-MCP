@@ -99,9 +99,12 @@ Do NOT use this tool when:
 - You only need a short platform-tailored bio (use get_bio instead).
 - You want to record a quick note or progress entry (use append_note instead).
 - The user query is completely unrelated to the developer or their projects.`,
-  {},
-  async () => {
-    const res = await apiRequest("/profile", { method: "GET" });
+  {
+    query: z.string().optional().describe("Optional search query to return only relevant excerpts and prevent context bloat."),
+  },
+  async ({ query }) => {
+    const endpoint = query ? `/profile?query=${encodeURIComponent(query)}` : "/profile";
+    const res = await apiRequest(endpoint, { method: "GET" });
 
     if (!res.ok) {
       return {
@@ -414,6 +417,296 @@ Do NOT use this tool when:
         {
           type: "text",
           text: JSON.stringify(res.data, null, 2),
+        },
+      ],
+    };
+  }
+);
+
+// ==========================================
+// TOOL 7: list_context_files
+// ==========================================
+server.tool(
+  "list_context_files",
+  `Lists metadata for user-owned context documents (PDFs, research notes, architecture specs, resumes).
+
+Use this tool when:
+- Discovering what supplementary context files or documents the user has uploaded.
+- Looking for specific project notes, career documents, or research whitepapers.
+
+Do NOT use this tool when:
+- You need the user's primary identity or stack (use get_profile_context instead).`,
+  {
+    group: z.string().optional().describe("Optional context group filter: career, projects, research, general"),
+    tag: z.string().optional().describe("Optional tag filter"),
+  },
+  async ({ group, tag }) => {
+    const params = new URLSearchParams();
+    if (group) params.set("group", group);
+    if (tag) params.set("tag", tag);
+    const queryStr = params.toString() ? `?${params.toString()}` : "";
+
+    const res = await apiRequest(`/context/files${queryStr}`, { method: "GET" });
+
+    if (!res.ok) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `[StoneWay Error]: Unable to list context files: ${res.error}`,
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: wrapInSafetyEnvelope(JSON.stringify(res.data, null, 2)),
+        },
+      ],
+    };
+  }
+);
+
+// ==========================================
+// TOOL 8: get_context_file
+// ==========================================
+server.tool(
+  "get_context_file",
+  `Fetches the verified extracted text content of a specific user-owned context file by its secure opaque ID (e.g. 'file_01j...').
+
+Use this tool when:
+- The user references a specific document or after discovering its ID via list_context_files or search_context.
+
+Do NOT use this tool when:
+- You want to search across all files (use search_context instead).
+- Guessing filenames (files must be addressed by their secure ID).`,
+  {
+    file_id: z.string().describe("The opaque file ID (e.g. 'file_01j...')"),
+  },
+  async ({ file_id }) => {
+    const res = await apiRequest(`/context/files/${encodeURIComponent(file_id)}`, { method: "GET" });
+
+    if (!res.ok) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `[StoneWay Error]: Unable to fetch context file: ${res.error}`,
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: res.data.safe_content || wrapInSafetyEnvelope(JSON.stringify(res.data, null, 2)),
+        },
+      ],
+    };
+  }
+);
+
+// ==========================================
+// TOOL 9: search_context
+// ==========================================
+server.tool(
+  "search_context",
+  `Searches extracted passages across the user's uploaded context files and StoneWay.md scratchpad.
+
+Use this tool when:
+- Looking for specific technical details, project architecture notes, or research papers without downloading entire documents.
+
+Do NOT use this tool when:
+- Querying standard profile fields like languages or bio (use get_profile_context instead).`,
+  {
+    query: z.string().describe("Search term or concept to find."),
+    group: z.string().optional().describe("Optional context group filter (career, projects, research)."),
+  },
+  async ({ query, group }) => {
+    const res = await apiRequest("/context/search", {
+      method: "POST",
+      body: JSON.stringify({ query, group }),
+    });
+
+    if (!res.ok) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `[StoneWay Error]: Search failed: ${res.error}`,
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: wrapInSafetyEnvelope(JSON.stringify(res.data, null, 2)),
+        },
+      ],
+    };
+  }
+);
+
+// ==========================================
+// TOOL 10: list_prompts
+// ==========================================
+server.tool(
+  "list_prompts",
+  `Lists user-authored custom prompts and workflows from PROMPTS.json.
+
+Use this tool when:
+- Discovering what specialized workflows or prompts the user has created.`,
+  {},
+  async () => {
+    const res = await apiRequest("/prompts", { method: "GET" });
+
+    if (!res.ok) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `[StoneWay Error]: Unable to list prompts: ${res.error}`,
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: wrapInSafetyEnvelope(JSON.stringify(res.data.prompts || [], null, 2)),
+        },
+      ],
+    };
+  }
+);
+
+// ==========================================
+// TOOL 11: run_prompt
+// ==========================================
+server.tool(
+  "run_prompt",
+  `Renders a user-authored prompt by name, substituting arguments and canonical profile context variables.
+
+Use this tool when:
+- Executing a user prompt found via list_prompts.`,
+  {
+    name: z.string().describe("Name of the prompt to render."),
+    arguments: z.record(z.any()).optional().describe("Arguments to substitute into the template."),
+  },
+  async ({ name, arguments: promptArgs }) => {
+    const res = await apiRequest("/prompts", {
+      method: "POST",
+      body: JSON.stringify({ name, arguments: promptArgs || {} }),
+    });
+
+    if (!res.ok) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `[StoneWay Error]: Unable to run prompt '${name}': ${res.error}`,
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: res.data.rendered_content,
+        },
+      ],
+    };
+  }
+);
+
+// ==========================================
+// TOOL 12: list_skills
+// ==========================================
+server.tool(
+  "list_skills",
+  `Lists specialized user skill guidelines (e.g. UI design tokens, coding standards) defined in PROMPTS.json.
+
+Use this tool when:
+- Discovering domain-specific conventions or design standards the user has defined.`,
+  {},
+  async () => {
+    const res = await apiRequest("/prompts", { method: "GET" });
+
+    if (!res.ok) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `[StoneWay Error]: Unable to list skills: ${res.error}`,
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: wrapInSafetyEnvelope(JSON.stringify(res.data.skills || [], null, 2)),
+        },
+      ],
+    };
+  }
+);
+
+// ==========================================
+// TOOL 13: get_skill
+// ==========================================
+server.tool(
+  "get_skill",
+  `Retrieves the complete instructions and guidelines for a specific skill by name.
+
+Use this tool when:
+- The user asks you to perform a task governed by a skill convention (e.g., UI building, testing standards).`,
+  {
+    name: z.string().describe("The exact name of the skill to fetch."),
+  },
+  async ({ name }) => {
+    const res = await apiRequest("/prompts", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    });
+
+    if (!res.ok) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `[StoneWay Error]: Unable to fetch skill '${name}': ${res.error}`,
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: res.data.rendered_content,
         },
       ],
     };

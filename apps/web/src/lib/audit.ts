@@ -18,7 +18,14 @@ export type AuditEventType =
   | "sync.trigger"
   | "sync.complete"
   | "sync.error"
-  | "auth.failure";
+  | "auth.failure"
+  | "claim.accepted"
+  | "claim.observation_only"
+  | "file.upload"
+  | "file.delete"
+  | "prompt.library_updated"
+  | "prompt.rendered"
+  | (string & {});
 
 /**
  * Anonymously hashes IP addresses with SHA-256 and a constant pepper to protect user privacy.

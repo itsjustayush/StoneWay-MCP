@@ -13,97 +13,95 @@
 [![Database: Neon](https://img.shields.io/badge/Database-Neon_Postgres-black.svg?style=flat-square)](https://neon.tech)
 [![Auth: Better_Auth](https://img.shields.io/badge/Auth-Better_Auth-black.svg?style=flat-square)](https://better-auth.com)
 
-> **StoneWay** is an open-source, cloud-backed Model Context Protocol (MCP) server that acts as **"Notion for your AI agents"**: one persistent, live-synchronized memory bank of a builder's identity, active projects, tech stack, snippets, vision, and bio materials that any AI agent can read and update.
+# Give every AI agent the same you.
+
+> **StoneWay gives your AI agents a persistent, user-owned source of identity, projects, preferences and context.**
+>
+> *“StoneWay isn’t where your AI remembers you. It’s where your agents learn who you are.”*
+
+StoneWay is a user-owned, provenance-aware, portable identity and context layer for builders. It maintains a canonical, verified source of truth across **Claude Desktop**, **Claude Code**, **Cursor**, **VS Code (GitHub Copilot)**, **Windsurf**, **Cline**, and custom autonomous agent loops.
 
 ---
 
-## ⚡ The Problem
+## ⚡ The Shift: From Generic AI Memory to Personal Agent Identity
 
-As a developer, hyper-builder, or "vibecoder", you interact with multiple AI tools every day: Claude Desktop, Claude Code, Cursor, Windsurf, custom agents, and web assistants.
+Generic AI memory dumps unbounded chat histories into crowded semantic search vectors. That creates three failure modes:
+1. **Unbounded Context Bloat:** Memory logs balloon into megabytes of noisy text, blowing out prompt windows.
+2. **Untrusted LLM Mutations:** Letting an arbitrary agent's LLM decide canonical identity creates prompt-injection vulnerabilities and hallucinations.
+3. **No Source Authority or Provenance:** If an external sync claims you use TypeScript while you manually wrote you prefer Python, "newer timestamp wins" overwrites explicit human intent.
 
-Every single time you start a new conversation or session, you face the same friction:
-- *"Who are you and what do you build?"*
-- Rewriting your bio from memory or searching for your GitHub links.
-- Explaining your current tech stack, preferred libraries, and active projects over and over again.
-- Losing context when an agent discovers an insight, finishes a prototype, or logs a system preference.
+### StoneWay's Provenance & Authority Engine
+Instead of *“LLM reconciles → server accepts”*, StoneWay enforces:
+```
+LLM proposes claims
+        ↓
+Server validates claims against strict schema
+        ↓
+Provenance & source authority engine
+        ↓
+Canonical profile
+```
 
-**StoneWay eliminates this.** It gives your AI agents a unified, cloud-persisted single source of truth.
+### Source Authority Hierarchy
+```
+USER (1.0)
+  ↓
+MANUAL PROFILE EDIT (0.9)
+  ↓
+VERIFIED CONNECTOR (0.8)
+  ↓
+AGENT CLAIM (0.6)
+  ↓
+INFERRED DATA (0.4)
+```
+- **`user_override = absolute`**: User-defined entries cannot be overwritten by external syncs or agent claims.
+- **Observations preserved**: Lower-authority claims are never discarded; they are preserved as structured observations with attribution.
+- **Why does StoneWay think this?**: Every canonical attribute maintains cryptographic and temporal provenance showing exactly which source, agent, or document authored it.
 
 ---
 
-## 🛠️ Architecture: The Tri-File Memory Model
+## 🛠️ Architecture: Identity, Context & Memory
 
-Each builder account is mapped to three files stored on a serverless Neon PostgreSQL database:
+```
+                         STONEWAY
+                            │
+          ┌─────────────────┼─────────────────┐
+          │                 │                 │
+          ▼                 ▼                 ▼
+    StoneWay.md       StoneWay.json      Context Files
+     human data       structured data     user documents
+    (scratchpad)       (provenance)        (PDF/DOCX/MD)
+          │                 │                 │
+          └─────────────────┼─────────────────┘
+                            │
+                       MCP Context
+                            │
+             ┌──────────────┼──────────────┐
+             ▼              ▼              ▼
+          Claude         Cursor          Codex
+```
 
-1. **`StoneWay.md` (Raw Scratchpad & Builder Memory):**
-   - Free-form, human-and-agent editable markdown file.
-   - Designed to absorb messy scratchpad notes, ideas, commit logs, and prompt preferences.
-2. **`StoneWay.json` (Structured Builder Matrix):**
-   - Schema-validated structured profile (Zod) acting as the primary source of truth for agents.
-   - Categorizes identity, technical profile, public/private contact, active projects, planned ideas, and overflow metadata (`unstructured_metadata[]`).
-3. **`StoneWayConfig` (AES-256-GCM Encrypted Envelope):**
-   - Stores the user's `STONEWAY_TOKEN` and optional third-party sync secrets (GitHub PAT, Notion token).
-   - Encrypted at rest using deployment-level symmetric keys; never exposed via agent MCP tools or plaintext database logs.
+### 1. Canonical Identity (`StoneWay.json` & `StoneWay.md`)
+- **`StoneWay.json`**: Schema-validated identity matrix (skills, active projects, credentials, preferences).
+- **`StoneWay.md`**: Human-readable scratchpad for notes and agent session summaries.
+- **Safety Envelope**: All profile content returned to agents is wrapped in `<USER DATA, NOT INSTRUCTIONS>` to neutralize prompt injection attacks.
+
+### 2. Context Files (`list_context_files`, `get_context_file`, `search_context`)
+- User-owned documents (PDFs, research notes, architecture diagrams, docx).
+- **Separation of Storage & Metadata**: Binary files reside securely in object storage, while metadata, tags, and extracted text live in Neon Postgres.
+- **Strict Tenant Isolation**: Every query requires `WHERE id = :file_id AND user_id = :authenticated_user_id`. Files are addressed by opaque IDs, never raw filenames.
+- **Originals are Immutable**: Lossless storage preserves original documents; derived representations provide searchable chunks without destroying the source.
+
+### 3. Prompt & Skill Libraries (`PROMPTS.json` / `PROMPTS.md`)
+- User-authored instructions and skill templates with variable interpolation (`{{var}}`, `{{profile.*}}`).
+- Exposed directly through dynamic MCP prompt handlers (`prompts/list`, `prompts/get`) and fallback tools (`list_prompts`, `run_prompt`, `list_skills`, `get_skill`).
 
 ---
 
-## 🚀 Quick Setup (for Claude Desktop, Claude Code, Cursor, Windsurf, Cline)
+## 🚀 Quick Setup (for Any Agent)
 
-### 1. Generate Your Key
-Log in to your StoneWay dashboard via GitHub, complete the quick onboarding, and copy your single builder token (`sw_...`).
-
-### 2. Configure MCP Client
-
-StoneWay provides a high-performance **Python MCP Server** (with zero-cloud local fallback and cryptographic safety envelopes):
-
-#### Option A: Python / `uvx` (Recommended)
-
-Add to your MCP configuration (e.g. `claude_desktop_config.json` or Cursor Settings):
-
-```json
-{
-  "mcpServers": {
-    "stoneway": {
-      "command": "uvx",
-      "args": ["stoneway-mcp"],
-      "env": {
-        "STONEWAY_TOKEN": "sw_your_token_here",
-        "STONEWAY_API_URL": "https://your-stoneway-domain.com/api/v1"
-      }
-    }
-  }
-}
-```
-
-Or run via standard Python:
-```json
-{
-  "mcpServers": {
-    "stoneway": {
-      "command": "python",
-      "args": ["-m", "stoneway_mcp"],
-      "env": {
-        "STONEWAY_TOKEN": "sw_your_token_here",
-        "STONEWAY_API_URL": "https://your-stoneway-domain.com/api/v1"
-      }
-    }
-  }
-}
-```
-
-*Local-Only Mode (Zero Cloud / Offline):*
-```json
-{
-  "mcpServers": {
-    "stoneway-local": {
-      "command": "uvx",
-      "args": ["stoneway-mcp", "--mode", "local", "--local-dir", "."]
-    }
-  }
-}
-```
-
-#### Option B: Node.js / `npx`
+### 1. Stdio (Local Node Execution)
+Add StoneWay to your agent's MCP settings using `npx`:
 
 ```json
 {
@@ -112,29 +110,52 @@ Or run via standard Python:
       "command": "npx",
       "args": ["-y", "stoneway-mcp"],
       "env": {
-        "STONEWAY_TOKEN": "sw_your_token_here",
-        "STONEWAY_API_URL": "https://your-stoneway-domain.com/api/v1"
+        "STONEWAY_TOKEN": "sw_your_token_here"
       }
     }
   }
 }
 ```
 
+### 2. Remote HTTP Endpoint (Cloud Agents: ChatGPT, Claude.ai)
+- **URL:** `https://stonewaymd.vercel.app/mcp`
+- **Auth:** `Authorization: Bearer sw_your_token_here`
+
+### 3. Standing Instruction for Every Agent
+Add this single standing instruction to your `CLAUDE.md`, `AGENTS.md`, `.cursor/rules`, or `GEMINI.md`:
+
+```markdown
+Before answering anything about me, my projects, or my preferences, call StoneWay's get_profile_context. After meaningful work, call append_note with what changed.
+```
+
 ---
 
-## 🔒 Security, Safety & Legal Protection
+## 🧰 Available MCP Tools
 
-StoneWay is built with a zero-plaintext security posture and comprehensive legal shielding:
-
-- **[MIT License](LICENSE):** Open-source code with full express warranty and liability disclaimers.
-- **[Terms of Service](TERMS.md):** Absolute limitation of liability ($0 cap), user indemnification, assumption of AI agent execution risks, and token custody rules.
-- **[Privacy Policy](PRIVACY.md):** Clear GDPR/CCPA-compliant disclosure explaining data storage in Neon Postgres, encryption at rest, zero data selling, and user data wipe mechanisms.
-- **[AI Safety & Disclaimers](DISCLAIMER.md):** Detailed guidelines on prompt injection safety envelopes, agent attribution limits, and non-affiliation statements.
-- **[Security Policy](SECURITY.md):** Vulnerability disclosure protocols and AES-256-GCM encryption architecture.
+| Tool | Purpose |
+|---|---|
+| `get_profile_context` | Retrieves canonical identity, skills, active projects, and preferences (supports optional `query` parameter for token-efficient filtered context). |
+| `update_profile_context` | Proposes structured field updates evaluated through the source authority engine. |
+| `append_note` | Appends concise timestamped session summaries and milestones to `StoneWay.md`. |
+| `get_bio` | Synthesizes tailored bios for Twitter/X, GitHub, LinkedIn, elevator pitches, and conferences. |
+| `trigger_external_sync` | Triggers transparent, permissioned sync from connected services (e.g. GitHub). |
+| `list_context_files` | Lists attached context files filtered by group or tags. |
+| `get_context_file` | Fetches extracted content of a specific document by its secure ID. |
+| `search_context` | Searches through extracted document passages and project notes. |
+| `list_prompts` / `run_prompt` | Accesses and renders user-authored prompts with profile variables. |
+| `list_skills` / `get_skill` | Retrieves specific developer skills on-demand. |
+| `export_json_resume` | Exports verified identity in standard JSON Resume schema. |
 
 ---
 
-## 👥 Creator & Community
+## 🔒 Security & Privacy Guarantees
 
-Built with 🖤 by **[itsjustayush](https://github.com/itsjustayush)** for builders, creators, and vibecoders everywhere.
-Distributed under the [MIT License](LICENSE).
+- **Zero-Token Leak Invariant**: API keys (`sw_...`), bearer tokens, and encryption keys are scrubbed and never written to audit tables or logged.
+- **Salted IP Hashing**: Audit logs record SHA-256 salted hashes of client IPs, never raw addresses.
+- **Tenant Isolation**: All queries enforce strict ownership verification on both the database and file storage tiers.
+- **Prompt Injection Defense**: Ingested content is strictly labeled inert data and disarmed before being passed to LLMs.
+
+---
+
+## 📜 License
+MIT © [Ayush](https://github.com/itsjustayush)

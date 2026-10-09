@@ -6,6 +6,8 @@ import { eq } from "drizzle-orm";
 import { getOrCreateProfile } from "@/lib/server-utils";
 import { STARTER_STONEWAY_MD, StoneWayJsonSchema } from "@stoneway/shared";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {

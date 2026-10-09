@@ -3,8 +3,8 @@ import "./globals.css";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "StoneWay — Unified Agent Memory & Bio Protocol",
-  description: "Notion for your AI agents. Cloud-backed, persistent developer memory and bio automation via MCP.",
+  title: "StoneWay — Give every AI agent the same you.",
+  description: "StoneWay gives your AI agents a persistent, user-owned source of identity, projects, preferences and context.",
 };
 
 export default function RootLayout({

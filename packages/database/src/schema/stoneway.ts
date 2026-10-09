@@ -1,6 +1,6 @@
 import { pgTable, text, timestamp, boolean, integer, jsonb } from "drizzle-orm/pg-core";
 import { user } from "./auth";
-import { EncryptedEnvelope, StoneWayJson } from "@stoneway/shared";
+import { EncryptedEnvelope, StoneWayJson, Observation, PromptItem } from "@stoneway/shared";
 
 export const profiles = pgTable("profiles", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -56,3 +56,53 @@ export const auditEvents = pgTable("audit_events", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const provenanceRecords = pgTable("provenance_records", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  field: text("field").notNull(),
+  canonicalValue: jsonb("canonical_value"),
+  canonicalSource: text("canonical_source").notNull(),
+  canonicalSourceType: text("canonical_source_type").notNull(),
+  sourceAgent: text("source_agent"),
+  sourceDocument: text("source_document"),
+  confidence: text("confidence").notNull().default("1.0"),
+  userOverride: boolean("user_override").notNull().default(false),
+  observations: jsonb("observations").$type<Observation[]>().default([]),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const contextFiles = pgTable("context_files", {
+  id: text("id").primaryKey().$defaultFn(() => `file_${crypto.randomUUID().replace(/-/g, "").substring(0, 16)}`),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  objectKey: text("object_key").notNull(),
+  filename: text("filename").notNull(),
+  mimeType: text("mime_type").notNull(),
+  size: integer("size").notNull(),
+  sha256: text("sha256").notNull(),
+  contextGroup: text("context_group").notNull().default("general"),
+  tags: jsonb("tags").$type<string[]>().default([]),
+  status: text("status").notNull().default("quarantine"),
+  version: integer("version").notNull().default(1),
+  extractedText: text("extracted_text"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const promptLibraries = pgTable("prompt_libraries", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id")
+    .notNull()
+    .unique()
+    .references(() => user.id, { onDelete: "cascade" }),
+  schemaVersion: integer("schema_version").notNull().default(1),
+  prompts: jsonb("prompts").$type<PromptItem[]>().notNull().default([]),
+  version: integer("version").notNull().default(1),
+  sha256: text("sha256"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});

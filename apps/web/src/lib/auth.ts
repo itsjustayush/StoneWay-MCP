@@ -1,6 +1,8 @@
+
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db, schema } from "@stoneway/database";
+import { dash } from "@better-auth/infra";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -13,7 +15,8 @@ export const auth = betterAuth({
     },
   }),
   secret: process.env.BETTER_AUTH_SECRET || "stoneway-build-fallback-secret-minimum-32-chars-ok",
-  baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
+  baseURL: process.env.BETTER_AUTH_URL || "https://stonewaymd.vercel.app",
+  basePath: "/api/auth",
   socialProviders: {
     github: {
       clientId: process.env.GITHUB_CLIENT_ID || "",
@@ -21,6 +24,7 @@ export const auth = betterAuth({
       scope: ["read:user", "user:email"],
     },
   },
+  plugins: [dash()],
 });
 
 export type Session = typeof auth.$Infer.Session;

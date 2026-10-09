@@ -39,12 +39,13 @@ class StoneWayClient:
             headers["Authorization"] = f"Bearer {self.token}"
         return headers
 
-    async def get_profile(self) -> ProfileContext:
+    async def get_profile(self, query: Optional[str] = None) -> ProfileContext:
         """Fetches the active StoneWay profile, structured JSON, and markdown scratchpad."""
         url = f"{self.api_url}/profile"
+        params = {"query": query} if query else None
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             try:
-                res = await client.get(url, headers=self._headers())
+                res = await client.get(url, params=params, headers=self._headers())
             except Exception as e:
                 raise StoneWayApiError(f"Network error connecting to StoneWay API ({url}): {e}")
 
@@ -138,5 +139,98 @@ class StoneWayClient:
         if not res.is_success:
             err_msg = data.get("error") or data.get("message") or f"HTTP {res.status_code}"
             raise StoneWayApiError(f"Connector sync failed: {err_msg}", res.status_code, data)
+
+        return data
+
+    async def list_context_files(
+        self,
+        group: Optional[str] = None,
+        tag: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Lists user-owned context files metadata."""
+        url = f"{self.api_url}/context/files"
+        params = {}
+        if group:
+            params["group"] = group
+        if tag:
+            params["tag"] = tag
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            try:
+                res = await client.get(url, params=params, headers=self._headers())
+            except Exception as e:
+                raise StoneWayApiError(f"Network error connecting to StoneWay API ({url}): {e}")
+
+        data = res.json() if res.headers.get("content-type", "").startswith("application/json") else {}
+        if not res.is_success:
+            err_msg = data.get("error") or data.get("message") or f"HTTP {res.status_code}"
+            raise StoneWayApiError(f"Failed to list context files: {err_msg}", res.status_code, data)
+
+        return data
+
+    async def get_context_file(self, file_id: str) -> Dict[str, Any]:
+        """Fetches content of a specific context file by ID."""
+        url = f"{self.api_url}/context/files/{file_id}"
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            try:
+                res = await client.get(url, headers=self._headers())
+            except Exception as e:
+                raise StoneWayApiError(f"Network error connecting to StoneWay API ({url}): {e}")
+
+        data = res.json() if res.headers.get("content-type", "").startswith("application/json") else {}
+        if not res.is_success:
+            err_msg = data.get("error") or data.get("message") or f"HTTP {res.status_code}"
+            raise StoneWayApiError(f"Failed to get context file: {err_msg}", res.status_code, data)
+
+        return data
+
+    async def search_context(self, query: str, group: Optional[str] = None) -> Dict[str, Any]:
+        """Searches across user context files and StoneWay.md."""
+        url = f"{self.api_url}/context/search"
+        payload = {"query": query}
+        if group:
+            payload["group"] = group
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            try:
+                res = await client.post(url, json=payload, headers=self._headers())
+            except Exception as e:
+                raise StoneWayApiError(f"Network error connecting to StoneWay API ({url}): {e}")
+
+        data = res.json() if res.headers.get("content-type", "").startswith("application/json") else {}
+        if not res.is_success:
+            err_msg = data.get("error") or data.get("message") or f"HTTP {res.status_code}"
+            raise StoneWayApiError(f"Search context failed: {err_msg}", res.status_code, data)
+
+        return data
+
+    async def list_prompts(self) -> Dict[str, Any]:
+        """Lists custom prompts and skills from PROMPTS.json."""
+        url = f"{self.api_url}/prompts"
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            try:
+                res = await client.get(url, headers=self._headers())
+            except Exception as e:
+                raise StoneWayApiError(f"Network error connecting to StoneWay API ({url}): {e}")
+
+        data = res.json() if res.headers.get("content-type", "").startswith("application/json") else {}
+        if not res.is_success:
+            err_msg = data.get("error") or data.get("message") or f"HTTP {res.status_code}"
+            raise StoneWayApiError(f"Failed to list prompts: {err_msg}", res.status_code, data)
+
+        return data
+
+    async def run_prompt(self, name: str, arguments: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Renders a custom prompt by name."""
+        url = f"{self.api_url}/prompts"
+        payload = {"name": name, "arguments": arguments or {}}
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            try:
+                res = await client.post(url, json=payload, headers=self._headers())
+            except Exception as e:
+                raise StoneWayApiError(f"Network error connecting to StoneWay API ({url}): {e}")
+
+        data = res.json() if res.headers.get("content-type", "").startswith("application/json") else {}
+        if not res.is_success:
+            err_msg = data.get("error") or data.get("message") or f"HTTP {res.status_code}"
+            raise StoneWayApiError(f"Run prompt failed: {err_msg}", res.status_code, data)
 
         return data

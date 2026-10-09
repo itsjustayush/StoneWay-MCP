@@ -2,7 +2,7 @@
   "name": "stoneway",
   "version": "0.1.0",
   "private": true,
-  "description": "Unified persistent memory ecosystem and MCP server for builders and AI agents",
+  "description": "Give every AI agent the same you.",
   "license": "MIT",
   "author": "itsjustayush",
   "packageManager": "pnpm@10.28.0",

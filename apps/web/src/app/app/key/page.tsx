@@ -96,6 +96,9 @@ export default function KeyHubPage() {
         <Link href="/app/editor" className="text-neutral-500 hover:text-white transition">
           editor (/app/editor)
         </Link>
+        <Link href="/app/prompts" className="text-neutral-500 hover:text-white transition">
+          prompts (/app/prompts)
+        </Link>
         <span className="font-bold text-white border-b-2 border-white pb-3 -mb-3.5">
           api key hub (/app/key)
         </span>

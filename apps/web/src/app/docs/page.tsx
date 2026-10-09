@@ -8,8 +8,8 @@ export default function DocsPage() {
       <div className="border-b border-neutral-900 pb-4 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-white tracking-wide">STONEWAY DOCUMENTATION</h1>
-          <p className="text-neutral-500 mt-1">
-            Universal Model Context Protocol (MCP) server, multi-agent setup, and memory reconciliation guide.
+          <p className="text-neutral-400 mt-1">
+            Give every AI agent the same you. Persistent, user-owned identity, projects, and context across all your coding tools.
           </p>
         </div>
         <Link href="/" className="text-neutral-500 hover:text-white transition">

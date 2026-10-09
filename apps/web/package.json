@@ -12,6 +12,7 @@
     "@neondatabase/serverless": "^0.10.4",
     "@stoneway/database": "workspace:*",
     "@stoneway/shared": "workspace:*",
+    "@better-auth/infra": "^0.4.15",
     "better-auth": "^1.1.18",
     "clsx": "^2.1.1",
     "dotenv": "^16.4.7",

@@ -271,3 +271,52 @@ export async function reconcileProfile(
     unstructuredCount: unstructuredSavedCount,
   };
 }
+
+/**
+ * Safely filters and chunks profile context to prevent context window blowouts.
+ * If query is passed, returns only sections relevant to the query.
+ */
+export function filterProfileContext(
+  stonewayMd: string,
+  stonewayJson: StoneWayJson,
+  query?: string
+): { mdExcerpt: string; jsonFiltered: Record<string, any>; isTruncated: boolean } {
+  if (!query || !query.trim()) {
+    // Default mode: Return canonical JSON and recent markdown scratchpad lines
+    const lines = stonewayMd.split("\n");
+    const maxLines = 60;
+    const isTruncated = lines.length > maxLines;
+    const mdExcerpt = isTruncated
+      ? `... [truncated earlier notes; showing latest ${maxLines} lines]\n` + lines.slice(-maxLines).join("\n")
+      : stonewayMd;
+
+    return {
+      mdExcerpt,
+      jsonFiltered: stonewayJson,
+      isTruncated,
+    };
+  }
+
+  // Filtered mode based on search query
+  const q = query.toLowerCase().trim();
+  const mdSections = stonewayMd.split(/^##\s+/gm);
+  const matchedSections: string[] = [];
+
+  for (const sec of mdSections) {
+    if (sec.toLowerCase().includes(q)) {
+      matchedSections.push("## " + sec.trim());
+    }
+  }
+
+  const mdExcerpt =
+    matchedSections.length > 0
+      ? matchedSections.join("\n\n")
+      : `[No matching sections found in StoneWay.md for query: "${query}"]`;
+
+  return {
+    mdExcerpt,
+    jsonFiltered: stonewayJson,
+    isTruncated: false,
+  };
+}
+

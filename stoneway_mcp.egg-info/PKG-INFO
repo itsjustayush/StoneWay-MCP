@@ -2,7 +2,7 @@ Metadata-Version: 2.4
 Name: stoneway-mcp
 Version: 0.1.0
 Summary: Cloud-backed Model Context Protocol (MCP) server & memory synchronization engine for AI vibecoders.
-Author-email: StoneWay Authors <oss@stoneway.dev>
+Author-email: Ayush Bhattacharya <itsjustayush@gmail.com>
 License: MIT
 Keywords: mcp,model-context-protocol,ai-agents,developer-profile,vibecoding,cursor,claude
 Classifier: Development Status :: 4 - Beta

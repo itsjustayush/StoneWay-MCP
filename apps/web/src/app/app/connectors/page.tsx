@@ -137,6 +137,9 @@ export default function ConnectorsPage() {
           <Link href="/app/editor" className="text-neutral-500 hover:text-white transition">
             editor (/app/editor)
           </Link>
+          <Link href="/app/prompts" className="text-neutral-500 hover:text-white transition">
+            prompts (/app/prompts)
+          </Link>
           <Link href="/app/key" className="text-neutral-500 hover:text-white transition">
             api key hub (/app/key)
           </Link>

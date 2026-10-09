@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { authenticateBearerToken, getOrCreateProfile, reconcileProfile } from "@/lib/server-utils";
+import { authenticateBearerToken, getOrCreateProfile, reconcileProfile, filterProfileContext } from "@/lib/server-utils";
 import { ProfileUpdatePayloadSchema } from "@stoneway/shared";
 
 export const dynamic = "force-dynamic";
@@ -18,18 +18,18 @@ export async function GET(req: Request) {
     const lastReconciled = json?.meta?.last_reconciled_md_version ?? 0;
     const needsReconcile = profile.version > lastReconciled;
 
-    // Extract unreconciled lines if version mismatch
-    const mdLines = md.split("\n");
-    const unreconciledExcerpt = needsReconcile
-      ? mdLines.slice(Math.max(0, mdLines.length - 25)).join("\n")
-      : undefined;
+    const { searchParams } = new URL(req.url);
+    const query = searchParams.get("query") || undefined;
+    const { mdExcerpt, jsonFiltered, isTruncated } = filterProfileContext(md, json, query);
+    const unreconciledExcerpt = needsReconcile ? md.slice(-500) : undefined;
 
     return NextResponse.json({
       version: profile.version,
       needs_reconcile: needsReconcile,
       unreconciled_md_excerpt: unreconciledExcerpt,
-      stoneway_json: json,
-      stoneway_md: md,
+      stoneway_json: jsonFiltered,
+      stoneway_md: mdExcerpt,
+      is_truncated: isTruncated,
     });
   } catch (err: any) {
     return NextResponse.json(

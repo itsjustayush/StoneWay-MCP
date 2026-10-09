@@ -1,6 +1,9 @@
 packages:
-  - "apps/*"
-  - "packages/*"
+  - apps/*
+  - packages/*
 
 allowBuilds:
   esbuild: true
+
+patchedDependencies:
+  '@better-auth/infra@0.4.15': patches/@better-auth__infra@0.4.15.patch

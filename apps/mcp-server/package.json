@@ -1,7 +1,7 @@
 {
   "name": "stoneway-mcp",
   "version": "0.1.0",
-  "description": "StoneWay Model Context Protocol (MCP) server for builder memory & bio automation",
+  "description": "Give every AI agent the same you.",
   "license": "MIT",
   "author": "itsjustayush",
   "bin": {

@@ -377,3 +377,8 @@ export const STARTER_STONEWAY_MD = `# StoneWay Profile Scratchpad
 ## Scratchpad & Dynamic Agent Logs
 <!-- AI agents append timestamped notes and commit logs below this line -->
 `;
+
+export * from "./provenance";
+export * from "./prompts";
+export * from "./files";
+

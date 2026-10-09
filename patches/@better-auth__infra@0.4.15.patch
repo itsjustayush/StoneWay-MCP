@@ -1,0 +1,13 @@
+diff --git a/dist/index.mjs b/dist/index.mjs
+index e18f9750e1864c0ad24cde695dcf23d072a56385..532adb150916e6c453b1805da54c7240acd22d1d 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -4397,7 +4397,7 @@ function isSafeHttpUrl(value) {
+ 	}
+ }
+ /** http(s) absolute URL without embedded credentials. */
+-const safeUrlSchema = z.string().trim().min(1).pipe(z.url().refine(isSafeHttpUrl, { message: "URL must be a valid http(s) URL without credentials" })).transform((value) => new URL(value).href);
++const safeUrlSchema = z.string().trim().min(1).pipe(z.string().url().refine(isSafeHttpUrl, { message: "URL must be a valid http(s) URL without credentials" })).transform((value) => new URL(value).href);
+ const optionalSafeUrlSchema = z.union([safeUrlSchema, z.literal("")]).optional();
+ /**
+ * Request-scoped full auth URL (origin + mount). Prefer over `options.baseURL`,

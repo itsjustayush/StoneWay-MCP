@@ -59,12 +59,13 @@ export default function LandingPage() {
       {/* Tagline */}
       <div className="space-y-4 max-w-3xl">
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">
-          Notion for your AI agents.
+          Give every AI agent the same you.
         </h1>
-        <p className="text-neutral-400 text-sm leading-relaxed">
-          StoneWay is a unified, cloud-backed Model Context Protocol (MCP) server designed for
-          hyper-builders and vibecoders. It maintains persistent, synchronized memory across Claude
-          Desktop, Claude Code, Cursor, and custom agent loops.
+        <p className="text-neutral-300 text-sm font-medium leading-relaxed">
+          StoneWay gives your AI agents a persistent, user-owned source of identity, projects, preferences and context.
+        </p>
+        <p className="text-neutral-500 text-xs italic">
+          &ldquo;StoneWay isn&rsquo;t where your AI remembers you. It&rsquo;s where your agents learn who you are.&rdquo;
         </p>
       </div>
 
