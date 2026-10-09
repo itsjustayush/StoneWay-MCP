@@ -1,5 +1,5 @@
 diff --git a/dist/index.mjs b/dist/index.mjs
-index e18f9750e1864c0ad24cde695dcf23d072a56385..532adb150916e6c453b1805da54c7240acd22d1d 100644
+index e18f9750e1864c0ad24cde695dcf23d072a56385..e58b19a3b93433555be746ebf7b11c05d7cb6a62 100644
 --- a/dist/index.mjs
 +++ b/dist/index.mjs
 @@ -4397,7 +4397,7 @@ function isSafeHttpUrl(value) {
@@ -11,3 +11,28 @@ index e18f9750e1864c0ad24cde695dcf23d072a56385..532adb150916e6c453b1805da54c7240
  const optionalSafeUrlSchema = z.union([safeUrlSchema, z.literal("")]).optional();
  /**
  * Request-scoped full auth URL (origin + mount). Prefer over `options.baseURL`,
+@@ -6581,3 +6581,3 @@ const checkUserExists = (options) => {
+ 		use: [jwtMiddleware(options)],
+-		body: z.object({ email: z.email() })
++		body: z.object({ email: z.string().email() })
+ 	}, async (ctx) => {
+@@ -9727,3 +9727,3 @@ const BaseCreateUserCoreBodySchema = z.object({
+ 	name: z.string(),
+-	email: z.email(),
++	email: z.string().email(),
+ 	image: z.string().optional(),
+@@ -9739,3 +9739,3 @@ const BaseUpdateUserCoreBodySchema = z.object({
+ 	name: z.string().nullable().optional(),
+-	email: z.email().optional(),
++	email: z.string().email().optional(),
+ 	image: z.string().nullable().optional(),
+@@ -9769,3 +9769,3 @@ function validateWritableCreateUserFields(data, options) {
+ 		name: z.string().min(1),
+-		email: z.email(),
++		email: z.string().email(),
+ 		image: z.string().optional(),
+@@ -9793,3 +9793,3 @@ function validateWritableUserUpdateFields(data, options) {
+ 		name: z.string().nullable().optional(),
+-		email: z.email().optional(),
++		email: z.string().email().optional(),
+ 		image: z.string().nullable().optional(),
