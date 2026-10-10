@@ -24,7 +24,11 @@ export const auth = betterAuth({
       scope: ["read:user", "user:email"],
     },
   },
-  plugins: [dash()],
+  plugins: [
+    dash({
+      apiKey: process.env.BETTER_AUTH_API_KEY,
+    }),
+  ],
 });
 
 export type Session = typeof auth.$Infer.Session;
